@@ -1,0 +1,13 @@
+The following files have been resolved:
+   org.springframework.boot:spring-boot-starter-data-jpa:jar:4.1.1:compile -- module spring.boot.starter.data.jpa [auto]
+   org.springframework.boot:spring-boot-starter-data-rest:jar:4.1.1:compile -- module spring.boot.starter.data.rest [auto]
+   org.springframework.boot:spring-boot-starter-jdbc:jar:4.1.1:compile -- module spring.boot.starter.jdbc [auto]
+   org.springframework.boot:spring-boot-starter-restclient:jar:4.1.1:compile -- module spring.boot.starter.restclient [auto]
+   org.springframework.boot:spring-boot-starter-security:jar:4.1.1:compile -- module spring.boot.starter.security [auto]
+   org.springframework.boot:spring-boot-starter-webmvc:jar:4.1.1:compile -- module spring.boot.starter.webmvc [auto]
+   com.h2database:h2:jar:2.4.240:runtime -- module com.h2database [auto]
+   org.springframework.boot:spring-boot-starter-webservices:jar:4.1.1:compile -- module spring.boot.starter.webservices [auto]
+   org.springframework.cloud:spring-cloud-starter-consul-config:jar:5.0.3:compile -- module spring.cloud.starter.consul.config (auto)
+   org.springframework.boot:spring-boot-devtools:jar:4.1.1:runtime (optional) -- module spring.boot.devtools [auto]
+   org.projectlombok:lombok:jar:1.18.46:compile (optional) -- module lombok
+
