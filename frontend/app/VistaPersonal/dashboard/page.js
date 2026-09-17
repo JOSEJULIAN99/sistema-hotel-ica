@@ -19,16 +19,16 @@ export default function DashboardPage() {
 
           {/* Navbar */}
           <nav className="p-4 space-y-1 text-xs font-medium">
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg font-medium">
+            <a href="/app/VistaPeronsal/dashboard" className="flex items-center gap-3 px-4 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg font-medium">
               📊 Dashboard
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/app/VistaPeronsal/reservas" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               📅 Reservas
             </a>
             <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               🔑 Check-in / Check-out
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/app/VistaPeronsal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               🛏️ Habitaciones
             </a>
             <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
