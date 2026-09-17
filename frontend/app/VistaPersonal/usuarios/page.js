@@ -5,10 +5,10 @@ export default function UsuariosPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       
-      {/* 1. Sidebar Reutilizable (Indicando que estamos en 'usuarios') */}
+      {/* Sidebar Reutilizable */}
       <Sidebar activo="reservas" rol="admin" />
 
-      {/* 2. Área Principal */}
+      
       <main className="flex-1 flex flex-col overflow-y-auto">
         
         {/* Header Reutilizable */}
@@ -36,7 +36,7 @@ export default function UsuariosPage() {
             </div>
           </div>
 
-          {/* Tabla de Usuarios y Roles */}
+          {/* Tabla  */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-sm font-bold text-slate-800">Listado de Personal y Accesos al Sistema</h3>

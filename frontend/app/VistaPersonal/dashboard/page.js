@@ -6,10 +6,10 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-gray-50 text-slate-800">
       
-      {/* 1. Sidebar- menu lateral*/}
+      {/*Sidebar*/}
       <aside className="w-64 bg-[#1e293b] text-slate-300 flex flex-col justify-between hidden md:flex">
         <div>
-          {/* Logo del Hotel */}
+         
           <div className="p-6 border-b border-slate-700">
             <Image  src="/hotel2.png"  alt="Logo Princes" width={130} height={40} className="object-contain"  />
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold pl-1">
@@ -31,19 +31,19 @@ export default function DashboardPage() {
             <a href="/app/VistaPeronsal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               🛏️ Habitaciones
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/VistaPersonal/limpieza" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               🧹 Limpieza
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/VistaPersonal/mantenimiento" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               🔧 Mantenimiento
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/VistaPersonal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               💳 Consumos
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/VistaPersonal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               📄 Pagos y facturación
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
+            <a href="/VistaPersonal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
               👥 Usuarios y roles
             </a>
           </nav>
@@ -57,7 +57,7 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* 2. Area Principal */}
+      
       <main className="flex-1 flex flex-col">
         
         {/* Header*/}
@@ -83,10 +83,10 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Cuerpo del Dashboard (Tarjetas de Métricas) */}
+       
         <div className="p-8 space-y-6 overflow-y-auto">
           
-          {/* Fila de Tarjetas Superiores */}
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -127,10 +127,10 @@ export default function DashboardPage() {
 
           </div>
 
-          {/*  Tablas y Accesos Rápidos */}
+          {/*  Accesos Rápidos */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Tabla de Últimas Reservas (Ocupa 2 columnas) */}
+            {/* Tabla de Últimas Reservas  */}
             <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-slate-800">Últimas reservas</h3>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Panel de Próximos Check-ins (Ocupa 1 columna) */}
+            {/* Panel de Próximos Check-ins */}
             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-slate-800">Próximos check-in</h3>

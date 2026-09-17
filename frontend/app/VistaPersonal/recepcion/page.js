@@ -5,10 +5,10 @@ export default function RecepcionPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       
-      {/* 1. Sidebar Reutilizable (Indicando que estamos en 'recepcion') */}
+      {/*  Sidebar Reutilizable */}
       <Sidebar activo="recepcion" />
 
-      {/* 2. Área Principal */}
+    
       <main className="flex-1 flex flex-col overflow-y-auto">
         
         {/* Header Reutilizable */}
@@ -17,10 +17,9 @@ export default function RecepcionPage() {
           subtitulo="Gestión de ingresos y salidas de huéspedes en tiempo real" 
         />
 
-        {/* Contenido de la Página */}
         <div className="p-10 space-y-6">
           
-          {/* Pestañas o Métricas Operativas */}
+          {/*Métricas Operativas */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
               <p className="text-xs text-gray-500 font-medium">Llegadas Previstas (Hoy)</p>
@@ -36,7 +35,7 @@ export default function RecepcionPage() {
             </div>
           </div>
 
-          {/* Tabla de Operaciones de Recepción */}
+          {/* Tabla */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-sm font-bold text-slate-800">Huéspedes en Curso y Próximos Movimientos</h3>

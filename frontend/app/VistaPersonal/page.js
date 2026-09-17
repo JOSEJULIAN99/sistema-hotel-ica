@@ -33,7 +33,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-xs font-medium text-slate-400 pt-6 border-t border-gray-100 flex items-center justify-between">
-            <span>Empresa Royal</span>
+            <span>Empresa Princes</span>
             <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-semibold">Ica -Perú</span>
           </div>
         </div>
