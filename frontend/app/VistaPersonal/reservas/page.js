@@ -5,22 +5,19 @@ export default function ReservasPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       
-      {/* 1. Sidebar Reutilizable (Indicando que estamos en 'reservas') */}
+      {/* 1. Sidebar reutilizado */}
       <Sidebar activo="reservas" rol="recepcion" />
 
-      {/* 2. Área Principal */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         
-        {/* Header Reutilizable */}
+        {/* Header reutilizado*/}
         <Header 
           titulo="Gestión de Reservas" 
-          subtitulo="Control y registro general de reservas del hotel" 
-        />
+          subtitulo="Control y registro general de reservas del hotel" />
 
-        {/* Contenido de la Página */}
         <div className="p-10 space-y-6">
           
-          {/* Barra de Acciones (Buscador y Botón Nueva Reserva) */}
+          {/* Barra de Acciones (Buscador y Botón de nueva reserva) */}
           <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm gap-4">
             <input 
               type="text" 

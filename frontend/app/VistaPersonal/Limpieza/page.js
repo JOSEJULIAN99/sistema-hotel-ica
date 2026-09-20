@@ -5,19 +5,18 @@ export default function LimpiezaPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       
-      {/* 1. Sidebar Reutilizable (Indicando que estamos en 'limpieza') */}
+      {/*Sidebar reutilizado */}
       <Sidebar activo="limpieza" />
 
-      {/* 2. Área Principal */}
+     
       <main className="flex-1 flex flex-col overflow-y-auto">
         
-        {/* Header Reutilizable */}
+        {/* Header reutilizado*/}
         <Header 
           titulo="Control de Limpieza y Pisos" 
           subtitulo="Monitoreo de estado de higienización de habitaciones" 
         />
 
-        {/* Contenido de la Página */}
         <div className="p-10 space-y-6">
           
           {/* Métricas rápidas */}

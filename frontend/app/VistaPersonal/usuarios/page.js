@@ -14,10 +14,8 @@ export default function UsuariosPage() {
         {/* Header Reutilizable */}
         <Header 
           titulo="Gestión de Usuarios y Roles" 
-          subtitulo="Administración de accesos, credenciales y permisos del personal del hotel" 
-        />
+          subtitulo="Administración de accesos, credenciales y permisos del personal del hotel"  />
 
-        {/* Contenido de la Página */}
         <div className="p-10 space-y-6">
           
           {/* Métricas rápidas de usuarios */}

@@ -5,19 +5,17 @@ export default function ConsumosPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       
-      {/* 1. Sidebar Reutilizable (Indicando que estamos en 'consumos') */}
+      {/* Sidebar reutilizado */}
       <Sidebar activo="consumos" />
 
-      {/* 2. Área Principal */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         
-        {/* Header Reutilizable */}
+        {/* Header reutilizado */}
         <Header 
           titulo="Control de Consumos y Servicios" 
           subtitulo="Registro de consumos adicionales del huésped (Minibar, Restaurante, Lavandería)" 
         />
 
-        {/* Contenido de la Página */}
         <div className="p-10 space-y-6">
           
           {/* Métricas rápidas */}
@@ -36,7 +34,7 @@ export default function ConsumosPage() {
             </div>
           </div>
 
-          {/* Tabla de Registro de Consumos */}
+          {/* Tabla de Registro de consumos */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-sm font-bold text-slate-800">Historial de Consumos por Habitación</h3>

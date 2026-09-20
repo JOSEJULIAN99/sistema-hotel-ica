@@ -5,19 +5,17 @@ export default function FacturacionPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       
-      {/* 1. Sidebar Reutilizable (Indicando que estamos en 'facturacion') */}
+     
       <Sidebar activo="facturacion" />
 
-      {/* 2. Área Principal */}
+      
       <main className="flex-1 flex flex-col overflow-y-auto">
         
-        {/* Header Reutilizable */}
+       
         <Header 
           titulo="Pagos y Facturación" 
-          subtitulo="Gestión de cobros, emisión de comprobantes y cierre de cuentas de huéspedes" 
-        />
+          subtitulo="Gestión de cobros, emisión de comprobantes y cierre de cuentas de huéspedes"  />
 
-        {/* Contenido de la Página */}
         <div className="p-10 space-y-6">
           
           {/* Métricas rápidas financieras */}
