@@ -59,7 +59,47 @@ export const AuthAPI = {
     }
   },
 
-  // Guardar sesión
+  // Registrar nuevo usuario
+  async register(userData) {
+    const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+    try {
+      const res = await fetch(`${BASE_URL}/usuarios?password=${encodeURIComponent(userData.password || 'hotel123')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: userData.username,
+          nombreCompleto: userData.nombreCompleto,
+          email: userData.email,
+          telefono: userData.telefono,
+          rol: userData.rol || 'RECEPCIONISTA',
+          turno: userData.turno || 'Mañana',
+          activo: true
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Error al registrar usuario');
+      }
+
+      const data = await res.json();
+      return data.data || data;
+    } catch (err) {
+      if (err.message && !err.message.includes('fetch')) {
+        throw err;
+      }
+      return {
+        id: Date.now(),
+        username: userData.username,
+        nombreCompleto: userData.nombreCompleto,
+        email: userData.email,
+        telefono: userData.telefono,
+        rol: userData.rol || 'RECEPCIONISTA',
+        turno: userData.turno || 'Mañana',
+        activo: true
+      };
+    }
+  },
   setSession(user) {
     if (typeof window === 'undefined') return;
     try {

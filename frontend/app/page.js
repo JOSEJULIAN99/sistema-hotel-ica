@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
   Hotel,
   Calendar,
@@ -23,9 +24,11 @@ import {
   Star,
   ChevronRight,
   ArrowRight,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 import { HabitacionAPI, ReservacionAPI, HuespedAPI } from '../lib/api';
+import { AuthAPI } from '../lib/auth';
 import ModalReserva from './components/ModalReserva';
 import ModalHuesped from './components/ModalHuesped';
 import { ToastProvider, useToast } from './components/Toast';
@@ -39,7 +42,9 @@ export default function Home() {
 }
 
 function HotelLandingContent() {
+  const router = useRouter();
   const { addToast } = useToast();
+  const [usuario, setUsuario] = useState(null);
   const [habitaciones, setHabitaciones] = useState([]);
   const [huespedes, setHuespedes] = useState([]);
   const [checkIn, setCheckIn] = useState(() => new Date().toISOString().split('T')[0]);
@@ -50,6 +55,7 @@ function HotelLandingContent() {
   const [habSeleccionada, setHabSeleccionada] = useState(null);
 
   useEffect(() => {
+    setUsuario(AuthAPI.getUsuarioActual());
     async function load() {
       try {
         const [h, hu] = await Promise.all([
@@ -71,8 +77,16 @@ function HotelLandingContent() {
   };
 
   const handleGuardarReserva = async (payload) => {
-    await ReservacionAPI.create(payload);
-    addToast('¡Tu solicitud de reservación ha sido registrada con éxito!', 'success');
+    try {
+      await ReservacionAPI.create(payload);
+      addToast('¡Reservación registrada con éxito! Ingresa al sistema para confirmarla.', 'success');
+      setModalReservaOpen(false);
+      setTimeout(() => {
+        router.push('/VistaPersonal/login');
+      }, 900);
+    } catch (err) {
+      addToast(err.message || 'Error al registrar reservación', 'error');
+    }
   };
 
   const habitacionesFiltradas = habitaciones.filter((h) => {
@@ -104,18 +118,46 @@ function HotelLandingContent() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/VistaPersonal"
-              className="px-4 py-2 border border-slate-300 bg-white text-slate-700 rounded-lg text-xs font-semibold transition hover:bg-slate-50"
-            >
-              <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5" /> Personal</span>
-            </Link>
-            <a
-              href="#habitaciones"
-              className="hidden sm:inline-flex px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-lg text-xs font-bold transition"
+            {usuario ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/VistaPersonal"
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Panel ({usuario.rol})</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    AuthAPI.logout();
+                    setUsuario(null);
+                    addToast('Sesión cerrada', 'info');
+                  }}
+                  className="p-2 text-slate-500 hover:text-rose-600 rounded-xl transition"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/VistaPersonal/login"
+                className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-500" />
+                <span>Iniciar Sesión</span>
+              </Link>
+            )}
+
+            <button
+              onClick={() => {
+                setHabSeleccionada(habitaciones[0] || null);
+                setModalReservaOpen(true);
+              }}
+              className="hidden sm:inline-flex px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-bold transition shadow-sm"
             >
               Reservar
-            </a>
+            </button>
           </div>
         </div>
       </header>
@@ -357,9 +399,12 @@ function HotelLandingContent() {
           </div>
 
           <div>
-            <h4 className="font-bold text-white uppercase text-[11px] tracking-[0.18em] mb-3">Personal</h4>
-            <Link href="/VistaPersonal" className="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-lg font-bold text-sm transition">
-              Ingresar <ArrowRight className="w-4 h-4" />
+            <h4 className="font-bold text-white uppercase text-[11px] tracking-[0.18em] mb-3">Acceso al Sistema</h4>
+            <Link
+              href="/VistaPersonal/login"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-xl font-bold text-xs transition shadow-sm"
+            >
+              <Lock className="w-3.5 h-3.5" /> Iniciar Sesión <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
