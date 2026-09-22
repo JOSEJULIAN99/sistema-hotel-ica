@@ -54,6 +54,20 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UsuarioDTO login(String username, String password) {
+        Usuario u = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new BadRequestException("Usuario o contraseña incorrectos"));
+        if (password == null || !password.equals(u.getPassword())) {
+            throw new BadRequestException("Usuario o contraseña incorrectos");
+        }
+        if (Boolean.FALSE.equals(u.getActivo())) {
+            throw new BadRequestException("El usuario se encuentra desactivado en el sistema");
+        }
+        return EntityMapper.toUsuarioDTO(u);
+    }
+
+    @Override
     @Transactional
     public UsuarioDTO crear(UsuarioDTO dto, String password) {
         if (usuarioRepository.existsByUsername(dto.getUsername())) {

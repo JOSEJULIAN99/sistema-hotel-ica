@@ -40,6 +40,14 @@ public class UsuarioController {
         return ResponseEntity.ok(ApiResponse.ok(u));
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<UsuarioDTO>> login(@RequestBody java.util.Map<String, String> credentials) {
+        String username = credentials.get("username");
+        String password = credentials.get("password");
+        UsuarioDTO u = usuarioService.login(username, password);
+        return ResponseEntity.ok(ApiResponse.ok("Inicio de sesión exitoso", u));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<UsuarioDTO>> crear(
             @RequestBody UsuarioDTO dto,

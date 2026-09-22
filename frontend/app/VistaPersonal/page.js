@@ -7,6 +7,7 @@ import {
   BedDouble,
   Sparkles,
   CalendarPlus,
+  CalendarCheck2,
   DollarSign,
   TrendingUp,
   UserCheck,
@@ -192,22 +193,22 @@ export default function DashboardPage() {
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Limpieza Pendiente</span>
-            <span className="p-2 bg-rose-50 text-rose-600 rounded-xl">
-              <Sparkles className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Reservas Registradas</span>
+            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+              <CalendarCheck2 className="w-4 h-4" />
             </span>
           </div>
           <div className="my-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-rose-600">{limpiezas.length}</span>
-              <span className="text-xs text-slate-500 font-medium">habitaciones por desinfectar</span>
+              <span className="text-3xl font-black text-indigo-600">{reservaciones.length}</span>
+              <span className="text-xs text-slate-500 font-medium">reservas en sistema</span>
             </div>
           </div>
           <Link
-            href="/VistaPersonal/limpieza"
-            className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+            href="/VistaPersonal/reservaciones"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
           >
-            Ver Tareas de Limpieza <ArrowUpRight className="w-3.5 h-3.5" />
+            Ver Reservaciones <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>

@@ -1,13 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, BedDouble, UserPlus, DollarSign, Calendar, CreditCard, ShoppingBag, LogOut, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, BedDouble, UserPlus, DollarSign, Calendar, CreditCard, ShoppingBag, LogOut, CheckCircle2, AlertCircle, User } from 'lucide-react';
 import { useToast } from './Toast';
+import { HuespedAPI } from '../../lib/api';
 
 // ==================== MODAL CHECK-IN ====================
 export function ModalCheckIn({ isOpen, onClose, onSuccess, habitaciones = [], huespedes = [], reservaciones = [] }) {
   const { addToast } = useToast();
   const [tipoCheckIn, setTipoCheckIn] = useState('directo'); // 'directo' | 'reserva'
+  const [modoHuesped, setModoHuesped] = useState('NUEVO'); // 'NUEVO' | 'EXISTENTE'
+
+  // Datos para nuevo huésped
+  const [nombres, setNombres] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState('DNI');
+  const [numeroDocumento, setNumeroDocumento] = useState('');
+  const [telefono, setTelefono] = useState('');
   
   // Directo
   const [huespedId, setHuespedId] = useState('');
@@ -33,16 +42,19 @@ export function ModalCheckIn({ isOpen, onClose, onSuccess, habitaciones = [], hu
   const reservasPendientes = reservaciones.filter(r => r.estado === 'CONFIRMADA' || r.estado === 'PENDIENTE');
 
   useEffect(() => {
-    if (habitacionesDisponibles.length > 0 && !habitacionId) {
-      setHabitacionId(habitacionesDisponibles[0].id);
+    if (isOpen) {
+      if (habitacionesDisponibles.length > 0 && !habitacionId) {
+        setHabitacionId(habitacionesDisponibles[0].id);
+      }
+      setNombres('');
+      setApellidos('');
+      setNumeroDocumento('');
+      setTelefono('');
+      setPagoInicial('');
+      setNroOperacion('');
+      setObservaciones('');
     }
-    if (huespedes.length > 0 && !huespedId) {
-      setHuespedId(huespedes[0].id);
-    }
-    if (reservasPendientes.length > 0 && !reservacionId) {
-      setReservacionId(reservasPendientes[0].id);
-    }
-  }, [habitaciones, huespedes, reservaciones]);
+  }, [isOpen, habitaciones]);
 
   if (!isOpen) return null;
 
@@ -62,12 +74,32 @@ export function ModalCheckIn({ isOpen, onClose, onSuccess, habitaciones = [], hu
           observaciones
         };
       } else {
-        if (!habitacionId || !huespedId) throw new Error('Selecciona una habitación y un huésped');
+        if (!habitacionId) throw new Error('Selecciona una habitación disponible');
+
+        let targetHuespedId = huespedId;
+        if (modoHuesped === 'NUEVO') {
+          if (!nombres.trim() || !apellidos.trim() || !numeroDocumento.trim()) {
+            throw new Error('Por favor ingresa Nombres, Apellidos y Documento del huésped');
+          }
+          const nuevo = await HuespedAPI.create({
+            nombres: nombres.trim(),
+            apellidos: apellidos.trim(),
+            tipoDocumento,
+            numeroDocumento: numeroDocumento.trim(),
+            telefono: telefono.trim() || null,
+            nacionalidad: 'Peruana',
+            ciudadProcedencia: 'Ica'
+          });
+          targetHuespedId = nuevo.id;
+        } else if (!targetHuespedId) {
+          throw new Error('Selecciona un huésped registrado');
+        }
+
         const noches = Math.max(1, Math.ceil((new Date(fechaSalida) - new Date()) / (1000 * 60 * 60 * 24)));
         const totalHosp = habSeleccionada ? habSeleccionada.precioPorNoche * noches : 100;
 
         payload = {
-          huespedId: Number(huespedId),
+          huespedId: Number(targetHuespedId),
           habitacionId: Number(habitacionId),
           fechaSalidaEsperada: fechaSalida,
           totalHospedaje: totalHosp,
@@ -131,20 +163,97 @@ export function ModalCheckIn({ isOpen, onClose, onSuccess, habitaciones = [], hu
           {tipoCheckIn === 'directo' ? (
             <>
               {/* Huésped */}
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Huésped Titular</label>
-                <select
-                  value={huespedId}
-                  onChange={(e) => setHuespedId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  required
-                >
-                  {huespedes.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.nombres} {h.apellidos} - {h.tipoDocumento}: {h.numeroDocumento}
-                    </option>
-                  ))}
-                </select>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-amber-500" /> Huésped Titular
+                  </label>
+                  {huespedes && huespedes.length > 0 && (
+                    <div className="inline-flex p-0.5 bg-slate-200 rounded-lg text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setModoHuesped('NUEVO')}
+                        className={`px-2 py-0.5 rounded-md font-bold transition ${
+                          modoHuesped === 'NUEVO' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                      >
+                        Nuevo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModoHuesped('EXISTENTE')}
+                        className={`px-2 py-0.5 rounded-md font-bold transition ${
+                          modoHuesped === 'EXISTENTE' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                        }`}
+                      >
+                        Registrado
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {modoHuesped === 'NUEVO' ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nombres *"
+                        value={nombres}
+                        onChange={(e) => setNombres(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-800"
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Apellidos *"
+                        value={apellidos}
+                        onChange={(e) => setApellidos(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-800"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={tipoDocumento}
+                        onChange={(e) => setTipoDocumento(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-800"
+                      >
+                        <option value="DNI">DNI</option>
+                        <option value="PASAPORTE">Pasaporte</option>
+                        <option value="CARNET_EXTRANJERIA">Carnet Ext.</option>
+                      </select>
+                      <input
+                        type="text"
+                        required
+                        placeholder="N° Documento *"
+                        value={numeroDocumento}
+                        onChange={(e) => setNumeroDocumento(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-800"
+                      />
+                    </div>
+                    <input
+                      type="tel"
+                      placeholder="Teléfono / WhatsApp (Opcional)"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      className="w-full p-2 rounded-lg border border-slate-300 bg-white text-slate-800"
+                    />
+                  </div>
+                ) : (
+                  <select
+                    value={huespedId}
+                    onChange={(e) => setHuespedId(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  >
+                    <option value="">-- Seleccionar huésped registrado --</option>
+                    {huespedes.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.nombres} {h.apellidos} ({h.tipoDocumento}: {h.numeroDocumento})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Habitación */}

@@ -369,6 +369,7 @@ function HotelLandingContent() {
         isOpen={modalReservaOpen}
         onClose={() => setModalReservaOpen(false)}
         onSave={handleGuardarReserva}
+        habitacionPreseleccionada={habSeleccionada}
         habitaciones={habitaciones}
         huespedes={huespedes}
       />

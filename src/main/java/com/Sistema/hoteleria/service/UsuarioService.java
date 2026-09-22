@@ -10,6 +10,7 @@ public interface UsuarioService {
     List<UsuarioDTO> obtenerPorRol(RolUsuario rol);
     UsuarioDTO obtenerPorId(Long id);
     UsuarioDTO obtenerPorUsername(String username);
+    UsuarioDTO login(String username, String password);
     UsuarioDTO crear(UsuarioDTO dto, String password);
     UsuarioDTO actualizar(Long id, UsuarioDTO dto);
     void desactivar(Long id);
