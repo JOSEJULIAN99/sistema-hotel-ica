@@ -1,5 +1,6 @@
-'use client';
+import React from 'react';
 
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -259,6 +260,12 @@ function PersonalLayoutContent({ children, pathname }) {
       <main className="flex-1 overflow-y-auto pt-16 lg:pt-0">
         {children}
       </main>
+=======
+export default function VistaPersonalLayout({ children }) {
+  return (
+    <div className="min-h-screen bg-slate-900">
+      {children}
+>>>>>>> origin/frontend-VistaPersonal
     </div>
   );
 }
