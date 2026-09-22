@@ -1,1 +1,7 @@
 resumen-ramas.*
+target/
+backend/target/
+.idea/
+*.iml
+node_modules/
+frontend/node_modules/
