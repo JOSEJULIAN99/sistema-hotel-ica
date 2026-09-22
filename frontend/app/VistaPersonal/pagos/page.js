@@ -34,7 +34,7 @@ export default function FacturacionPage() {
             </div>
           </div>
 
-          {/* Tabla de Cuentas y Facturación */}
+          {/* Tabla de historial de cuentas */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-sm font-bold text-slate-800">Cuentas de Huéspedes y Estado de Pagos</h3>

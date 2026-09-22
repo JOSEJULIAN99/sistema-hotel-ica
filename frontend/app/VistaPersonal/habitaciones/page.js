@@ -1,176 +1,130 @@
-import Link from 'next/link';
-import Image from 'next/image';
+'use client';
+import { useState } from 'react';
+import Sidebar from '../componentes/Sidebar';
+import Header from '../componentes/Header';
 
 export default function HabitacionesPage() {
+  const [habitaciones] = useState([
+    { numero: '102', tipo: 'Matrimonial', precio: 'S/ 180.00', estado: 'Ocupada' },
+    { numero: '204', tipo: 'Doble', precio: 'S/ 240.00', estado: 'Disponible' },
+    { numero: '308', tipo: 'Simple', precio: 'S/ 120.00', estado: 'En Limpieza' },
+  ]);
+
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('Todos los estados');
+
+  const habitacionesFiltradas = habitaciones.filter(h => {
+    const coincideTexto = h.numero.toLowerCase().includes(busqueda.toLowerCase()) || 
+                          h.tipo.toLowerCase().includes(busqueda.toLowerCase());
+    const coincideEstado = filtroEstado === 'Todos los estados' || h.estado.toLowerCase() === filtroEstado.toLowerCase();
+    return coincideTexto && coincideEstado;
+  });
+
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
-      
-      {/* 1. Sidebar (Menú Lateral Institucional) */}
-      <aside className="w-64 bg-[#0B132B] text-slate-300 flex flex-col justify-between border-r border-slate-800">
-        <div>
-          {/* Logo y Subtítulo */}
-          <div className="p-6 border-b border-slate-700/60">
-            <Image 
-              src="/hotel2.jpg" 
-              alt="Logo The Royal Hotel" 
-              width={140} 
-              height={45} 
-              className="object-contain mb-1.5" 
-            />
-            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold pl-1">
-              Sistema de Gestión
-            </p>
-          </div>
+    <div className="flex h-screen bg-[#F8FAFC] font-sans text-slate-700">
+      <Sidebar activo="habitaciones" />
 
-          {/* Opciones de Navegación */}
-          <nav className="p-4 space-y-1 text-xs font-medium">
-            <Link href="/app/VistaPersonal/dashboard" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              📊 Dashboard
-            </Link>
-            <Link href="/app/VistaPersonal/reservas" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              📅 Reservas
-            </Link>
-            <Link href="/VistaPersonal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              🔑 Check-in / Check-out
-            </Link>
-            <Link href="/VistaPersonal/habitaciones" className="flex items-center gap-3 px-4 py-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg">
-              🛏️ Habitaciones
-            </Link>
-            <Link href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              🧹 Limpieza
-            </Link>
-            <Link href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              🔧 Mantenimiento
-            </Link>
-            <Link href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              💳 Consumos
-            </Link>
-            <Link href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              📄 Pagos y facturación
-            </Link>
-            <Link href="#" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 rounded-lg transition">
-              👥 Usuarios y roles
-            </Link>
-          </nav>
-        </div>
-
-        {/* Botón Cerrar Sesión */}
-        <div className="p-4 border-t border-slate-700/60">
-          <Link 
-            href="/" 
-            className="flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition text-xs font-medium w-full"
-          >
-            <span>❌​</span>
-            <span>Cerrar sesión</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* 2. Área Principal */}
       <main className="flex-1 flex flex-col overflow-y-auto">
-        
-        {/* Header Superior */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-10 shadow-sm">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">Control de Habitaciones</h2>
-            <p className="text-xs text-gray-500">Estado general y disponibilidad de la infraestructura hotelera</p>
-          </div>
+        <Header 
+          titulo="Control de Habitaciones" 
+          subtitulo="Estado general y disponibilidad de la infraestructura hotelera" 
+        />
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm bg-gray-100 px-3 py-1.5 rounded-lg text-gray-600 font-medium">
-              📅 Hoy, 16 de septiembre de 2025
-            </span>
-            <div className="flex items-center gap-3 border-l pl-6 border-gray-200">
-              <div className="bg-blue-600 text-white font-bold w-9 h-9 rounded-full flex items-center justify-center">
-                AT
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-700">Ana Torres</p>
-                <p className="text-[11px] text-gray-500">Recepción</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Contenido de la Página */}
-        <div className="p-10 space-y-6">
+        <div className="p-8 space-y-6 w-full">
           
-          {/* Filtros rápidos por estado */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">Disponibles</p>
-              <p className="text-xl font-bold text-emerald-600 mt-1">12</p>
+          {/* 4 Tarjetas de Métricas Arriba */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs text-slate-400 font-medium">Disponibles</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">12</p>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">Ocupadas</p>
-              <p className="text-xl font-bold text-blue-600 mt-1">16</p>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs text-slate-400 font-medium">Ocupadas</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">16</p>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">En Limpieza</p>
-              <p className="text-xl font-bold text-amber-600 mt-1">2</p>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs text-slate-400 font-medium">En Limpieza</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">2</p>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">Mantenimiento</p>
-              <p className="text-xl font-bold text-rose-600 mt-1">0</p>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <p className="text-xs text-slate-400 font-medium">Mantenimiento</p>
+              <p className="text-2xl font-bold text-slate-800 mt-1">0</p>
             </div>
           </div>
 
-          {/* Listado / Tabla de Habitaciones */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          {/* tabla de Habitaciones con Filtros */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            
+            <div className="py-5 px-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h3 className="text-sm font-bold text-slate-800">Listado de Habitaciones</h3>
-              <input 
-                type="text" 
-                placeholder="Buscar habitación..." 
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs w-64 text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <select 
+                  value={filtroEstado}
+                  onChange={(e) => setFiltroEstado(e.target.value)}
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-600 bg-white focus:outline-none"
+                >
+                  <option>Todos los estados</option>
+                  <option>Disponible</option>
+                  <option>Ocupada</option>
+                  <option>En Limpieza</option>
+                </select>
+
+                <input 
+                  type="text" 
+                  placeholder="Buscar habitación..." 
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-600 w-full sm:w-64 focus:outline-none"
+                />
+              </div>
             </div>
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Número</th>
-                  <th className="p-4 font-semibold">Tipo</th>
-                  <th className="p-4 font-semibold">Precio / Noche</th>
-                  <th className="p-4 font-semibold">Estado Actual</th>
-                  <th className="p-4 font-semibold text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-slate-700">
-                <tr className="hover:bg-gray-50/50 transition">
-                  <td className="p-4 font-bold text-slate-800">102</td>
-                  <td className="p-4">Matrimonial</td>
-                  <td className="p-4">S/ 180.00</td>
-                  <td className="p-4">
-                    <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium text-[11px]">Ocupada</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-gray-500 hover:text-blue-600 font-medium">Ver detalle</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition">
-                  <td className="p-4 font-bold text-slate-800">204</td>
-                  <td className="p-4">Doble</td>
-                  <td className="p-4">S/ 240.00</td>
-                  <td className="p-4">
-                    <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium text-[11px]">Disponible</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-gray-500 hover:text-blue-600 font-medium">Ver detalle</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition">
-                  <td className="p-4 font-bold text-slate-800">308</td>
-                  <td className="p-4">Simple</td>
-                  <td className="p-4">S/ 120.00</td>
-                  <td className="p-4">
-                    <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium text-[11px]">En Limpieza</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-gray-500 hover:text-blue-600 font-medium">Ver detalle</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase text-[10px] tracking-wider">
+                    <th className="py-4 px-6 font-semibold">NÚMERO</th>
+                    <th className="py-4 px-6 font-semibold">TIPO</th>
+                    <th className="py-4 px-6 font-semibold">PRECIO / NOCHE</th>
+                    <th className="py-4 px-6 font-semibold">ESTADO ACTUAL</th>
+                    {/* Se añadió pr-8 para separar la cabecera de ACCIONES del borde */}
+                    <th className="py-4 pl-6 pr-8 font-semibold text-right">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-600">
+                  {habitacionesFiltradas.length > 0 ? (
+                    habitacionesFiltradas.map((hab, index) => (
+                      <tr key={index} className="hover:bg-slate-50/50 transition">
+                        <td className="py-4 px-6 font-bold text-slate-800">{hab.numero}</td>
+                        <td className="py-4 px-6">{hab.tipo}</td>
+                        <td className="py-4 px-6 font-medium">{hab.precio}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-3 py-1 rounded-full font-medium text-[10px] inline-block ${
+                            hab.estado === 'Disponible' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                            hab.estado === 'Ocupada' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                          }`}>
+                            {hab.estado}
+                          </span>
+                        </td>
+                        {/* Se añadió pr-8 para separar los botones del borde derecho */}
+                        <td className="py-4 pl-6 pr-8 text-right">
+                          <button className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer">
+                            Ver detalle
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="py-6 text-center text-slate-400">
+                        No se encontraron habitaciones
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>
