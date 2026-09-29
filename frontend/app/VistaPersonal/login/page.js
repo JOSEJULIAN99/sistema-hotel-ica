@@ -43,15 +43,28 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await AuthAPI.login(username.trim(), password.trim());
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('userRole', user.rol || user.role || 'ADMIN');
+        localStorage.setItem('userName', user.nombreCompleto || user.username);
+      }
+
       addToast(`Bienvenido/a ${user.nombreCompleto || user.username}`, 'success');
-      router.push('/VistaPersonal');
+      
+      
+      const rolActual = user.rol || user.role || '';
+      if (rolActual === 'LIMPIEZA') {
+        router.push('/VistaPersonal/habitaciones');
+      } else {
+        router.push('/VistaPersonal');
+      }
+
     } catch (err) {
       addToast(err.message || 'Credenciales incorrectas', 'error');
     } finally {
       setLoading(false);
     }
   };
-
   const handleRegister = async (e) => {
     e.preventDefault();
 

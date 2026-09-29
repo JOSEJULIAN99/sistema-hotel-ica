@@ -9,8 +9,12 @@ export default function TablaHabitaciones({
   onEditar,
   onEliminar,
   onSeleccionarHabitacion,
-  vista = 'grid' // 'grid' | 'table'
+  vista = 'grid', // 'grid' | 'table'
+  usuarioRol = 'ADMIN'
 }) {
+
+  const rolActual = usuarioRol ? usuarioRol.toUpperCase() : ''; 
+  const tienePermisoEdicion = rolActual !== 'LIMPIEZA' && rolActual !== 'CLEANING';
   const getEstadoBadge = (estado) => {
     switch (estado) {
       case 'DISPONIBLE':
@@ -129,7 +133,7 @@ export default function TablaHabitaciones({
                         <option value="MANTENIMIENTO">⚪ Mantenimiento</option>
                       </select>
 
-                      {onEditar && (
+                      { tienePermisoEdicion && onEditar(
                         <button
                           onClick={() => onEditar(h)}
                           className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
@@ -139,7 +143,7 @@ export default function TablaHabitaciones({
                         </button>
                       )}
 
-                      {onEliminar && (
+                      {tienePermisoEdicion && onEliminar && (
                         <button
                           onClick={() => onEliminar(h.id)}
                           className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
@@ -241,7 +245,7 @@ export default function TablaHabitaciones({
               </select>
 
               <div className="flex items-center gap-1">
-                {onEditar && (
+                {tienePermisoEdicion && onEditar && (
                   <button
                     onClick={() => onEditar(h)}
                     className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200"
@@ -250,7 +254,7 @@ export default function TablaHabitaciones({
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                 )}
-                {onEliminar && (
+                {tienePermisoEdicion && onEliminar && (
                   <button
                     onClick={() => onEliminar(h.id)}
                     className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200"

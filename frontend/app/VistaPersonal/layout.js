@@ -100,6 +100,12 @@ function PersonalLayoutContent({ children, pathname }) {
       label: 'Reservaciones',
       icon: CalendarCheck2,
       roles: ['ADMINISTRADOR', 'RECEPCIONISTA', 'GERENTE']
+    },
+    {
+      href: '/VistaPersonal/Limpieza',
+      label: 'Aseo y Limpieza',
+      icon: Sparkles,
+      roles: ['ADMINISTRADOR', 'LIMPIEZA', 'GERENTE']
     }
   ];
 

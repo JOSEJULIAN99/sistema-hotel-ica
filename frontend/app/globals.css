@@ -46,21 +46,30 @@
 
 /* Print styles for Hotel Check-out Receipts */
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  #printable-voucher, #printable-voucher * {
-    visibility: visible;
-  }
-  #printable-voucher {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 20px;
-  }
-  .no-print {
+  /* Ocultar todo el cuerpo y la app de fondo */
+  body > * {
     display: none !important;
+  }
+
+  /* Mostrar únicamente el modal contenedor y el voucher con fondo blanco limpio */
+  .fixed, div[role="dialog"], #printable-voucher {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    z-index: 99999 !important;
+    box-shadow: none !important;
+  }
+
+  /* Ocultar botones de acción y elementos con la clase no-print */
+  .no-print, button {
+    display: none !important;
+  }
+
+  #printable-voucher, #printable-voucher * {
+    visibility: visible !important;
   }
 }

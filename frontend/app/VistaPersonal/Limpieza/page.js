@@ -14,6 +14,7 @@ import {
   X,
   Filter
 } from 'lucide-react';
+import { AuthAPI } from '../../../lib/auth';
 import { LimpiezaAPI, HabitacionAPI, UsuarioAPI } from '../../../lib/api';
 import { useToast } from '../../components/Toast';
 
@@ -24,6 +25,10 @@ export default function LimpiezaPage() {
   const [personal, setPersonal] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [loading, setLoading] = useState(true);
+
+  // Estados de control de roles 
+  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [isLimpiezaRole, setIsLimpiezaRole] = useState(false);
 
   // Modal Nueva Tarea
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,6 +41,11 @@ export default function LimpiezaPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const user = AuthAPI.getUsuarioActual();
+      if (user) {
+        setUsuarioActual(user);
+        setIsLimpiezaRole(user.rol === 'LIMPIEZA');
+      }
       const [t, h, u] = await Promise.all([
         LimpiezaAPI.getAll(),
         HabitacionAPI.getAll(),
@@ -141,18 +151,21 @@ export default function LimpiezaPage() {
                 Limpieza, Aseo & Mantenimiento
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                Asignación de habitaciones a camareras, flujo de desinfección y liberación a estado disponible.
+                {isLimpiezaRole
+                ? 'Panel de ejecución: Inicia y completa las tareas de desinfección asignadas.'
+                : 'Asignación de habitaciones a camareras, flujo de desinfección y liberación a estado disponible.'}
               </p>
             </div>
           </div>
         </div>
-
-        <button
-          onClick={() => setModalOpen(true)}
-          className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Programar Limpieza
-        </button>
+        {!isLimpiezaRole && (
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Programar Limpieza
+          </button>
+        )}
       </div>
 
       {/* Filtros */}
@@ -242,7 +255,7 @@ export default function LimpiezaPage() {
                       <span className="text-slate-500 flex items-center gap-1">
                         <User className="w-3.5 h-3.5 text-slate-400" /> Mucama Asignada:
                       </span>
-                      {isCompletada ? (
+                      {isCompletada || isLimpiezaRole ? (
                         <span className="font-bold text-slate-800">
                           {tarea.empleadoAsignado?.nombreCompleto || 'Personal de Turno'}
                         </span>
@@ -269,7 +282,7 @@ export default function LimpiezaPage() {
                   {isPendiente && (
                     <button
                       onClick={() => handleIniciar(tarea.id)}
-                      className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs"
+                      className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <Play className="w-4 h-4 fill-slate-950" /> Iniciar Limpieza
                     </button>
@@ -278,7 +291,7 @@ export default function LimpiezaPage() {
                   {isEnProceso && (
                     <button
                       onClick={() => handleCompletar(tarea.id)}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs"
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" /> Completar & Marcar Disponible
                     </button>
@@ -297,7 +310,7 @@ export default function LimpiezaPage() {
       )}
 
       {/* Modal Nueva Tarea */}
-      {modalOpen && (
+      {modalOpen && !isLimpiezaRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden my-8 border border-slate-200">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">

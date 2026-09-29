@@ -6,6 +6,7 @@ import { HabitacionAPI } from '../../../lib/api';
 import TablaHabitaciones from '../componentes/TablaHabitaciones';
 import ModalHabitacion from '../../components/ModalHabitacion';
 import { useToast } from '../../components/Toast';
+import { AuthAPI } from '../../../lib/auth';
 
 export default function HabitacionesPage() {
   const { addToast } = useToast();
@@ -16,6 +17,17 @@ export default function HabitacionesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [vista, setVista] = useState('grid'); // 'grid' | 'table'
   const [loading, setLoading] = useState(true);
+
+  const [usuario, setUsuario] = useState(null);
+
+  useEffect(() => {
+    const activeUser = AuthAPI.getUsuarioActual();
+    if (activeUser) {
+      setUsuario(activeUser);
+    }
+  }, []);
+
+  const usuarioRol = usuario?.rol || '';
 
   // Modales
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,13 +91,13 @@ export default function HabitacionesPage() {
   };
 
   // Filtrado
-  const habitacionesFiltradas = habitaciones.filter((h) => {
+ const habitacionesFiltradas = habitaciones.filter((h) => {
     if (pisoFiltro !== 'TODOS' && String(h.piso) !== String(pisoFiltro)) return false;
-    if (estadoFiltro !== 'TODOS' && h.estado !== estadoFiltro) return false;
-    if (tipoFiltro !== 'TODOS' && h.tipo !== tipoFiltro) return false;
+    if (estadoFiltro !== 'TODOS' && String(h.estado).toUpperCase() !== String(estadoFiltro).toUpperCase()) return false;
+    if (tipoFiltro !== 'TODOS' && String(h.tipo).toUpperCase() !== String(tipoFiltro).toUpperCase()) return false;
     if (busqueda) {
       const q = busqueda.toLowerCase();
-      const nro = String(h.numero).toLowerCase();
+      const nro = String(h.numero || '').toLowerCase();
       const desc = (h.descripcion || '').toLowerCase();
       const car = (h.caracteristicas || '').toLowerCase();
       return nro.includes(q) || desc.includes(q) || car.includes(q);
@@ -112,13 +124,14 @@ export default function HabitacionesPage() {
             </div>
           </div>
         </div>
-
+        {usuarioRol !== 'LIMPIEZA' && (
         <button
           onClick={handleNueva}
           className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-2"
         >
           <Plus className="w-4 h-4" /> Nueva Habitación
         </button>
+       )}
       </div>
 
       {/* Barra de Filtros */}

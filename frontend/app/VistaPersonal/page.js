@@ -35,6 +35,12 @@ export default function DashboardPage() {
   const [reservaciones, setReservaciones] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') || 'ADMIN' : 'ADMIN';
+  useEffect(() => {
+    // Limpiamos la sesión anterior para evitar que el rol viejo bloquee el acceso
+    localStorage.removeItem('userRole');
+  }, []);
+    
   // Modales
   const [modalCheckInOpen, setModalCheckInOpen] = useState(false);
   const [modalReservaOpen, setModalReservaOpen] = useState(false);
@@ -44,6 +50,7 @@ export default function DashboardPage() {
 
   // Carga de datos
   const loadData = async () => {
+    if (userRole === 'LIMPIEZA') return;
     setLoading(true);
     try {
       const [s, h, e, l, hu, r] = await Promise.all([
@@ -95,7 +102,9 @@ export default function DashboardPage() {
     await HabitacionAPI.create(payload);
     loadData();
   };
-
+  if (userRole === 'LIMPIEZA') {
+    return null;
+  }
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Header del Dashboard */}
