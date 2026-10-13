@@ -1,153 +1,217 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 import {
-  BellRing,
   BedDouble,
-  Sparkles,
-  CalendarPlus,
   CalendarCheck2,
+  CalendarPlus,
+  Clock,
   DollarSign,
+  Filter,
+  Plus,
+  RefreshCw,
+  Search,
   TrendingUp,
   UserCheck,
-  Clock,
-  ArrowUpRight,
-  RefreshCw,
-  Plus
+  BellRing,
+  X
 } from 'lucide-react';
-import { DashboardAPI, HabitacionAPI, EstadiaAPI, LimpiezaAPI, HuespedAPI, ReservacionAPI } from '../../lib/api';
-import TarjetasEstados from './componentes/TarjetasEstados';
+
+import {
+  DashboardAPI,
+  HabitacionAPI,
+  EstadiaAPI,
+  HuespedAPI,
+  ReservacionAPI,
+} from '../../lib/api';
+
+import { AuthAPI } from '../../lib/auth';
+
 import TablaHabitaciones from './componentes/TablaHabitaciones';
-import { ModalCheckIn, ModalCheckOut, ModalConsumo, ModalPago } from '../components/ModalesRecepcion';
-import ModalReserva from '../components/ModalReserva';
-import ModalHabitacion from '../components/ModalHabitacion';
-import ComprobanteModal from '../components/ComprobanteModal';
+import TarjetasEstados from './componentes/TarjetasEstados';
 import { useToast } from '../components/Toast';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { addToast } = useToast();
+
+  const [usuario, setUsuario] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState(null);
+
   const [habitaciones, setHabitaciones] = useState([]);
   const [estadias, setEstadias] = useState([]);
-  const [limpiezas, setLimpiezas] = useState([]);
   const [huespedes, setHuespedes] = useState([]);
   const [reservaciones, setReservaciones] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
-  const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') || 'ADMIN' : 'ADMIN';
-  useEffect(() => {
-    // Limpiamos la sesión anterior para evitar que el rol viejo bloquee el acceso
-    localStorage.removeItem('userRole');
-  }, []);
-    
-  // Modales
-  const [modalCheckInOpen, setModalCheckInOpen] = useState(false);
-  const [modalReservaOpen, setModalReservaOpen] = useState(false);
-  const [modalHabitacionOpen, setModalHabitacionOpen] = useState(false);
-  const [comprobanteData, setComprobanteData] = useState(null);
-  const [comprobanteOpen, setComprobanteOpen] = useState(false);
+  // Filtros del Rack
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
+  const [filtroPiso, setFiltroPiso] = useState('TODOS');
+  const [filtroTipo, setFiltroTipo] = useState('TODOS');
+  const [vistaRack, setVistaRack] = useState('grid');
 
-  // Carga de datos
-  const loadData = async () => {
-    if (userRole === 'LIMPIEZA') return;
+  useEffect(() => {
+    const activeUser = AuthAPI.getUsuarioActual();
+    if (!activeUser) {
+      router.replace('/VistaPersonal/login');
+      return;
+    }
+    setUsuario(activeUser);
+    setAuthChecked(true);
+  }, [router]);
+
+  const userRole = String(
+    usuario?.rol ||
+      usuario?.role ||
+      (typeof window !== 'undefined' ? localStorage.getItem('userRole') || '' : '')
+  ).toUpperCase();
+
+  const esAdmin = userRole === 'ADMIN' || userRole === 'ADMINISTRADOR' || userRole === 'GERENTE';
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, h, e, l, hu, r] = await Promise.all([
+      const [
+        statsData,
+        habitacionesData,
+        estadiasData,
+        huespedesData,
+        reservacionesData,
+      ] = await Promise.all([
         DashboardAPI.getStats(),
         HabitacionAPI.getAll(),
         EstadiaAPI.getAll(true),
-        LimpiezaAPI.getAll(true),
         HuespedAPI.getAll(),
-        ReservacionAPI.getAll()
+        ReservacionAPI.getAll(),
       ]);
-      setStats(s);
-      setHabitaciones(h || []);
-      setEstadias(e || []);
-      setLimpiezas(l || []);
-      setHuespedes(hu || []);
-      setReservaciones(r || []);
-    } catch (err) {
-      console.error('Error cargando dashboard', err);
+
+      setStats(statsData || null);
+      setHabitaciones(habitacionesData || []);
+      setEstadias(estadiasData || []);
+      setHuespedes(huespedesData || []);
+      setReservaciones(reservacionesData || []);
+    } catch (error) {
+      console.error('Error cargando dashboard:', error);
+      if (addToast) {
+        addToast('No se pudo cargar toda la información del dashboard.', 'error');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleCambiarEstadoHab = async (id, estado) => {
-    try {
-      await HabitacionAPI.updateEstado(id, estado);
-      addToast(`Estado de habitación actualizado a ${estado}`, 'success');
+    if (authChecked) {
       loadData();
-    } catch (err) {
-      addToast('Error al actualizar estado', 'error');
     }
-  };
+  }, [authChecked, loadData]);
 
-  const handleCheckInSuccess = async (payload) => {
-    await EstadiaAPI.checkIn(payload);
+  const pisos = useMemo(() => {
+    const valores = habitaciones
+      .map((h) => h.piso ?? h.numeroPiso ?? h.nivel)
+      .filter((v) => v !== undefined && v !== null && v !== '');
+    return [...new Set(valores.map(String))].sort((a, b) => Number(a) - Number(b));
+  }, [habitaciones]);
+
+  const tipos = useMemo(() => {
+    const valores = habitaciones
+      .map((h) => h.tipo ?? h.tipoHabitacion ?? h.categoria)
+      .filter((v) => v !== undefined && v !== null && v !== '');
+    return [...new Set(valores.map(String))].sort();
+  }, [habitaciones]);
+
+  const habitacionesFiltradas = useMemo(() => {
+    return habitaciones.filter((habitacion) => {
+      const numero = String(habitacion.numero ?? habitacion.numeroHabitacion ?? habitacion.codigo ?? '');
+      const estado = String(habitacion.estado ?? '');
+      const piso = String(habitacion.piso ?? habitacion.numeroPiso ?? habitacion.nivel ?? '');
+      const tipo = String(habitacion.tipo ?? habitacion.tipoHabitacion ?? habitacion.categoria ?? '');
+
+      const textoBusqueda = busqueda.trim().toLowerCase();
+      const coincideBusqueda =
+        !textoBusqueda ||
+        numero.toLowerCase().includes(textoBusqueda) ||
+        tipo.toLowerCase().includes(textoBusqueda) ||
+        estado.toLowerCase().includes(textoBusqueda);
+
+      const coincideEstado = filtroEstado === 'TODOS' || estado.toUpperCase() === filtroEstado.toUpperCase();
+      const coincidePiso = filtroPiso === 'TODOS' || piso === filtroPiso;
+      const coincideTipo = filtroTipo === 'TODOS' || tipo.toUpperCase() === filtroTipo.toUpperCase();
+
+      return coincideBusqueda && coincideEstado && coincidePiso && coincideTipo;
+    });
+  }, [habitaciones, busqueda, filtroEstado, filtroPiso, filtroTipo]);
+
+  const handleRefresh = () => {
     loadData();
   };
 
-  const handleReservaSuccess = async (payload) => {
-    await ReservacionAPI.create(payload);
-    loadData();
-  };
-
-  const handleHabitacionSuccess = async (payload) => {
-    await HabitacionAPI.create(payload);
-    loadData();
-  };
-  if (userRole === 'LIMPIEZA') {
-    return null;
+  if (!authChecked || !usuario) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-white">
+          <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
+          <p className="text-sm text-slate-400">Verificando sesión...</p>
+        </div>
+      </div>
+    );
   }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Header del Dashboard */}
+
+      {/* Header principal */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xl">☀️</span>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Panel Operativo • Hotel Princes Ica
+              {esAdmin
+                ? 'Panel Administrativo • Hotel Princes Ica'
+                : 'Panel Operativo • Hotel Princes Ica'}
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Monitoreo en tiempo real de ocupación, check-in de huéspedes, tarifas e ingresos.
+            Monitoreo general de la operación, ocupación e información financiera del hotel en tiempo real.
           </p>
         </div>
 
-        {/* Botones de Acción Rápida */}
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={loadData}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+            type="button"
+            onClick={handleRefresh}
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
             title="Refrescar datos"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
+          {/* Redireccion a recepcion y check in */}
           <button
-            onClick={() => setModalCheckInOpen(true)}
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md shadow-amber-500/20 flex items-center gap-2"
+            type="button"
+            onClick={() => router.push('/VistaPersonal/recepcion')}
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md shadow-amber-500/20 flex items-center gap-2 cursor-pointer"
           >
             <BellRing className="w-4 h-4" /> Nuevo Check-In
           </button>
 
+          {/* Redireccion a reservas */}
           <button
-            onClick={() => setModalReservaOpen(true)}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition shadow-md flex items-center gap-2"
+            type="button"
+            onClick={() => router.push('/VistaPersonal/reservaciones')}
+            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition shadow-md flex items-center gap-2 cursor-pointer"
           >
             <CalendarPlus className="w-4 h-4 text-amber-400" /> Nueva Reserva
           </button>
         </div>
       </div>
 
-      {/* Métricas y Tarjetas de Estado */}
+      {/* Tarjetas de estado */}
       <section className="space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
           Estado del Hotel & Ocupación
@@ -155,131 +219,119 @@ export default function DashboardPage() {
         <TarjetasEstados stats={stats} />
       </section>
 
-      {/* Métricas Financieras y de Flujo Diario */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700 shadow-md flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Ingresos del Día</span>
-            <span className="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl">
-              <DollarSign className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="my-3">
-            <span className="text-3xl font-black text-white font-mono">
-              S/ {Number(stats?.ingresosHoy || 350.00).toFixed(2)}
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-400 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Cobros en efectivo, Yape, Plin y tarjetas</span>
-          </p>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Flujo de Hoy</span>
-            <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-              <Clock className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2 my-2">
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Check-Ins</span>
-              <span className="text-xl font-bold text-slate-900">{stats?.checkInsHoy || estadias.length}</span>
-            </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Check-Outs</span>
-              <span className="text-xl font-bold text-slate-900">{stats?.checkOutsHoy || 0}</span>
-            </div>
-          </div>
-          <Link
-            href="/VistaPersonal/recepcion"
-            className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
-          >
-            Ir a Recepción y Salidas <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Reservas Registradas</span>
-            <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-              <CalendarCheck2 className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="my-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-indigo-600">{reservaciones.length}</span>
-              <span className="text-xs text-slate-500 font-medium">reservas en sistema</span>
-            </div>
-          </div>
-          <Link
-            href="/VistaPersonal/reservaciones"
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-          >
-            Ver Reservaciones <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </div>
-
-      {/* Rack de Habitaciones Resumen */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Rack visual de habitaciones */}
+      <section className="space-y-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Rack Visual de Habitaciones</h2>
-            <p className="text-xs text-slate-500">Distribución por estado y disponibilidad inmediata</p>
+            <h2 className="text-base font-black text-slate-900">
+              Gestión & Rack de Habitaciones
+            </h2>
+            <p className="text-xs text-slate-500">
+              Organización de dormitorios por piso, configuración de tarifas y control de mantenimiento.
+            </p>
           </div>
+
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setModalHabitacionOpen(true)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4 text-slate-600" /> Añadir Habitación
-            </button>
-            <Link
-              href="/VistaPersonal/habitaciones"
-              className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
-            >
-              Ver Todas <ArrowUpRight className="w-4 h-4" />
-            </Link>
+            {esAdmin && (
+              <button
+                type="button"
+                onClick={() => router.push('/VistaPersonal/habitaciones')}
+                className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Añadir Habitación
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Barra de buscador y filtros */}
+        <div className="flex flex-col xl:flex-row gap-3 items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+          
+          <div className="relative flex-1 w-full min-w-[240px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por N° habitación o equipamiento..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-amber-400 transition"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
+            <select
+              value={filtroPiso}
+              onChange={(e) => setFiltroPiso(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-400"
+            >
+              <option value="TODOS">Todos los Pisos</option>
+              {pisos.map((piso) => (
+                <option key={String(piso)} value={String(piso)}>Piso {piso}</option>
+              ))}
+            </select>
+
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-400"
+            >
+              <option value="TODOS">Todos los Estados</option>
+              <option value="DISPONIBLE">Disponible</option>
+              <option value="OCUPADA">Ocupada</option>
+              <option value="RESERVADA">Reservada</option>
+              <option value="LIMPIEZA">Limpieza</option>
+              <option value="MANTENIMIENTO">Mantenimiento</option>
+            </select>
+
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-amber-400"
+            >
+              <option value="TODOS">Todos los Tipos</option>
+              {tipos.map((tipo) => (
+                <option key={String(tipo)} value={String(tipo)}>{tipo}</option>
+              ))}
+            </select>
+
+            {/* Botones de cambio de vista(Grid/Tabla */}
+            <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setVistaRack('grid')}
+                className={`p-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  vistaRack === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+                title="Vista de Tarjetas"
+              >
+                <BedDouble className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setVistaRack('table')}
+                className={`p-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  vistaRack === 'table' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+                title="Vista de Tabla"
+              >
+                <Filter className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Tabla/Rack de habitaciones */}
         <TablaHabitaciones
-          habitaciones={habitaciones.slice(0, 8)}
-          onCambiarEstado={handleCambiarEstadoHab}
+          habitaciones={habitacionesFiltradas}
+          vista={vistaRack}
+          usuarioRol={userRole}
+          onCambiarEstado={loadData}
         />
+
       </section>
 
-      {/* Modales */}
-      <ModalCheckIn
-        isOpen={modalCheckInOpen}
-        onClose={() => setModalCheckInOpen(false)}
-        onSuccess={handleCheckInSuccess}
-        habitaciones={habitaciones}
-        huespedes={huespedes}
-        reservaciones={reservaciones}
-      />
-
-      <ModalReserva
-        isOpen={modalReservaOpen}
-        onClose={() => setModalReservaOpen(false)}
-        onSave={handleReservaSuccess}
-        habitaciones={habitaciones}
-        huespedes={huespedes}
-      />
-
-      <ModalHabitacion
-        isOpen={modalHabitacionOpen}
-        onClose={() => setModalHabitacionOpen(false)}
-        onSave={handleHabitacionSuccess}
-      />
-
-      <ComprobanteModal
-        isOpen={comprobanteOpen}
-        onClose={() => setComprobanteOpen(false)}
-        data={comprobanteData}
-      />
     </div>
   );
 }

@@ -91,7 +91,7 @@ export default function RecepcionPage() {
     setModalCheckOutOpen(false);
     if (resData) {
       setComprobanteData(resData);
-      setComprobanteOpen(true);
+      
     }
   };
 
@@ -337,8 +337,8 @@ export default function RecepcionPage() {
       />
 
       <ComprobanteModal
-        isOpen={comprobanteOpen}
-        onClose={() => setComprobanteOpen(false)}
+        isOpen={Boolean(comprobanteData)}
+        onClose={() => setComprobanteOpen(null)}
         data={comprobanteData}
       />
     </div>

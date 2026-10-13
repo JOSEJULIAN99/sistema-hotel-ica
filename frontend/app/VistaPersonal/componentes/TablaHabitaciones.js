@@ -15,6 +15,7 @@ export default function TablaHabitaciones({
 
   const rolActual = usuarioRol ? usuarioRol.toUpperCase() : ''; 
   const tienePermisoEdicion = rolActual !== 'LIMPIEZA' && rolActual !== 'CLEANING';
+
   const getEstadoBadge = (estado) => {
     switch (estado) {
       case 'DISPONIBLE':
@@ -133,7 +134,7 @@ export default function TablaHabitaciones({
                         <option value="MANTENIMIENTO">⚪ Mantenimiento</option>
                       </select>
 
-                      { tienePermisoEdicion && onEditar(
+                      {tienePermisoEdicion && onEditar && (
                         <button
                           onClick={() => onEditar(h)}
                           className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
@@ -243,7 +244,7 @@ export default function TablaHabitaciones({
                 <option value="RESERVADA">🟣 Reservada</option>
                 <option value="MANTENIMIENTO">⚪ Mantenimiento</option>
               </select>
-
+               
               <div className="flex items-center gap-1">
                 {tienePermisoEdicion && onEditar && (
                   <button

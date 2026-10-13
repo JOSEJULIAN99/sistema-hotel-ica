@@ -9,7 +9,8 @@ export const AuthAPI = {
     if (typeof window === 'undefined') return null;
     try {
       const data = localStorage.getItem(AUTH_STORAGE_KEY);
-      return data ? JSON.parse(data) : null;
+      if (!data || data === 'undefined' || data === 'null') return null;
+      return JSON.parse(data);
     } catch (e) {
       return null;
     }
@@ -114,6 +115,7 @@ export const AuthAPI = {
     if (typeof window === 'undefined') return;
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.clear(); // Limpia cualquier residuo de roles anteriores
     } catch (e) {
       console.error('Error cerrando sesión', e);
     }
