@@ -64,6 +64,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/registro").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/habitaciones", "/api/habitaciones/**").permitAll()
                         .requestMatchers("/api/publico/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/**").hasRole(ADMIN)
+                        .requestMatchers("/api/monitoreo", "/api/monitoreo/**").hasAnyRole(ADMIN, GERENTE)
 
                         // Usuarios: lectura para supervisores, escritura solo administrador
                         .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**").hasAnyRole(ADMIN, GERENTE, RECEPCION)

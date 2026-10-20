@@ -24,7 +24,8 @@ import {
   Bot,
   Settings,
   TrendingUp,
-  Wrench
+  Wrench,
+  Activity
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
@@ -42,7 +43,8 @@ const ACCESO_POR_RUTA = [
   { prefijo: '/VistaPersonal/reportes', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
   { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] },
-  { prefijo: '/VistaPersonal/tarifas', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] }
+  { prefijo: '/VistaPersonal/tarifas', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/monitoreo', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] }
 ];
 
 function rutaPermitida(pathname, rol) {
@@ -323,6 +325,21 @@ function PersonalLayoutContent({
         'RECEPCIONISTA',
         'GERENTE',
         'LIMPIEZA'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // MONITOREO DEL SISTEMA
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/monitoreo',
+      label: 'Monitoreo',
+      icon: Activity,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'GERENTE'
       ]
     },
 

@@ -1012,3 +1012,10 @@ export const MercadoPagoAPI = {
     return await request(`/publico/mercadopago/verificar?payment_id=${encodeURIComponent(paymentId)}`, { method: 'POST' });
   }
 };
+
+// ==================== MONITOREO (administrador y gerencia) ====================
+export const MonitoreoAPI = {
+  async resumen() {
+    return await request('/monitoreo');
+  }
+};
