@@ -8,6 +8,18 @@ Sistema web para la gestión del Hotel Princes Ica: habitaciones, huéspedes, re
 | Base de datos | PostgreSQL 16 (Docker) |
 | Frontend | Next.js 16 · React 19 · Tailwind CSS 4 |
 
+## Funciones principales
+
+- Reservas sin solapamiento, check-in/check-out, consumos y pagos por estadía
+- Roles (administrador, gerente, recepción, limpieza) con JWT y contraseñas BCrypt
+- Avisos instantáneos a limpieza e historial de incidencias de mantenimiento
+- Pagos en línea con Mercado Pago (modo prueba)
+- IA libre (Llama): chatbot 24/7 para huéspedes, traducción y asistente de recepción
+- Tarifas dinámicas por feriados, festividades de Ica y ocupación, con aprobación e historial
+- Fotos de habitaciones en Supabase Storage y panel de monitoreo
+
+Documentación en `docs/`: diagnóstico, modelo TO-BE, requisitos y costos, Supabase y Mercado Pago.
+
 ## Requisitos
 
 - Java 21 y Docker Desktop
