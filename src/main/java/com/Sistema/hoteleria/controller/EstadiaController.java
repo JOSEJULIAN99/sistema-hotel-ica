@@ -13,7 +13,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/estadias")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class EstadiaController {
 
     private final EstadiaService estadiaService;

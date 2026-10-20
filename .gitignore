@@ -1,0 +1,29 @@
+# Compilación Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# Variables de entorno (nunca subir credenciales)
+.env
+.env.local
+*.env
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
