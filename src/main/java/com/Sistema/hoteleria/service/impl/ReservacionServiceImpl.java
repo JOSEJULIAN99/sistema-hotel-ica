@@ -14,6 +14,8 @@ import com.Sistema.hoteleria.repository.EstadiaRepository;
 import com.Sistema.hoteleria.repository.HabitacionRepository;
 import com.Sistema.hoteleria.repository.HuespedRepository;
 import com.Sistema.hoteleria.repository.ReservacionRepository;
+import com.Sistema.hoteleria.repository.TarifaTemporadaRepository;
+import com.Sistema.hoteleria.service.tarifas.CalculadoraTarifa;
 import com.Sistema.hoteleria.service.ReservacionService;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class ReservacionServiceImpl implements ReservacionService {
     private final HuespedRepository huespedRepository;
     private final HabitacionRepository habitacionRepository;
     private final EstadiaRepository estadiaRepository;
+    private final TarifaTemporadaRepository tarifaTemporadaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -133,8 +136,10 @@ public class ReservacionServiceImpl implements ReservacionService {
                     + " ya tiene una reserva que se cruza con las fechas " + dto.getFechaEntrada() + " a " + dto.getFechaSalida());
         }
 
-        long noches = ChronoUnit.DAYS.between(dto.getFechaEntrada(), dto.getFechaSalida());
-        BigDecimal precioTotal = habitacion.getPrecioPorNoche().multiply(BigDecimal.valueOf(noches));
+        // Precio noche por noche con las tarifas de temporada aprobadas por el administrador
+        BigDecimal precioTotal = CalculadoraTarifa.total(habitacion.getPrecioPorNoche(), habitacion.getTipo(),
+                dto.getFechaEntrada(), dto.getFechaSalida(),
+                tarifaTemporadaRepository.findActivasEnRango(dto.getFechaEntrada(), dto.getFechaSalida()));
 
         BigDecimal adelanto = dto.getAdelanto() != null ? dto.getAdelanto() : BigDecimal.ZERO;
         if (adelanto.compareTo(precioTotal) > 0) {

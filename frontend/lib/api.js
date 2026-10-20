@@ -902,3 +902,56 @@ export const TraduccionAPI = {
     return await request('/traduccion', { method: 'POST', body: JSON.stringify({ texto, idiomaDestino }) });
   }
 };
+
+// ==================== TARIFAS DINÁMICAS (admin y gerencia) ====================
+export const TarifasAPI = {
+  async pendientes() {
+    return await request('/tarifas/recomendaciones');
+  },
+  async historial() {
+    return await request('/tarifas/historial');
+  },
+  async analizar(desde, hasta) {
+    const q = new URLSearchParams();
+    if (desde) q.set('desde', desde);
+    if (hasta) q.set('hasta', hasta);
+    const qs = q.toString();
+    return await request(`/tarifas/analizar${qs ? '?' + qs : ''}`, { method: 'POST' });
+  },
+  async decidir(id, aprobar, porcentaje, comentario) {
+    return await request(`/tarifas/recomendaciones/${id}/decidir`, {
+      method: 'PATCH',
+      body: JSON.stringify({ aprobar, porcentaje: porcentaje === '' || porcentaje == null ? null : Number(porcentaje), comentario: comentario || null })
+    });
+  },
+  async temporadas() {
+    return await request('/tarifas/temporadas');
+  },
+  async crearTemporada(datos) {
+    return await request('/tarifas/temporadas', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async desactivarTemporada(id) {
+    return await request(`/tarifas/temporadas/${id}/desactivar`, { method: 'PATCH' });
+  }
+};
+
+export const EventosAPI = {
+  async listar() {
+    return await request('/eventos');
+  },
+  async crear(datos) {
+    return await request('/eventos', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async actualizar(id, datos) {
+    return await request(`/eventos/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
+  },
+  async eliminar(id) {
+    return await request(`/eventos/${id}`, { method: 'DELETE' });
+  }
+};
+
+// Precio de una estancia con las tarifas de temporada vigentes (público)
+export async function cotizarEstancia(habitacionId, entrada, salida) {
+  const q = new URLSearchParams({ habitacionId, entrada, salida }).toString();
+  return await request(`/publico/cotizacion?${q}`);
+}

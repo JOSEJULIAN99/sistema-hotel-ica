@@ -54,6 +54,31 @@ public class ConfiguracionNegocio {
     @Column(name = "reglas_asistente", columnDefinition = "TEXT")
     private String reglasAsistente;
 
+    // ---- Reglas del motor de tarifas (porcentajes sobre la tarifa base) ----
+    @Column(name = "umbral_ocupacion_alta")
+    private Integer umbralOcupacionAlta;
+
+    @Column(name = "aumento_ocupacion_alta")
+    private Integer aumentoOcupacionAlta;
+
+    @Column(name = "aumento_feriado")
+    private Integer aumentoFeriado;
+
+    @Column(name = "aumento_festividad")
+    private Integer aumentoFestividad;
+
+    @Column(name = "aumento_evento")
+    private Integer aumentoEvento;
+
+    @Column(name = "aumento_temporada_alta")
+    private Integer aumentoTemporadaAlta;
+
+    @Column(name = "aumento_maximo")
+    private Integer aumentoMaximo;
+
+    @Column(name = "horizonte_dias")
+    private Integer horizonteDias;
+
     @Column(name = "actualizado_por", length = 50)
     private String actualizadoPor;
 

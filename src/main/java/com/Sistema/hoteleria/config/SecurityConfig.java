@@ -85,6 +85,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/configuracion/**", "/api/configuracion").hasRole(ADMIN)
                         .requestMatchers("/api/traduccion/**", "/api/traduccion").hasAnyRole(ADMIN, GERENTE, RECEPCION)
 
+                        // Tarifas dinámicas y calendario: gerencia consulta, el administrador decide
+                        .requestMatchers(HttpMethod.GET, "/api/tarifas/**", "/api/eventos", "/api/eventos/**").hasAnyRole(ADMIN, GERENTE)
+                        .requestMatchers("/api/tarifas/**", "/api/eventos", "/api/eventos/**").hasRole(ADMIN)
+
                         // Asistente IA: cada función según el rol que la usa
                         .requestMatchers(HttpMethod.POST, "/api/asistente/recomendar").hasAnyRole(ADMIN, GERENTE, RECEPCION)
                         .requestMatchers("/api/asistente/resumen-diario").hasAnyRole(ADMIN, GERENTE)

@@ -22,7 +22,8 @@ import {
   CreditCard,
   FileText,
   Bot,
-  Settings
+  Settings,
+  TrendingUp
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
@@ -38,7 +39,8 @@ const ACCESO_POR_RUTA = [
   { prefijo: '/VistaPersonal/transacciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/reportes', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
   { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] },
-  { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] }
+  { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] },
+  { prefijo: '/VistaPersonal/tarifas', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] }
 ];
 
 function rutaPermitida(pathname, rol) {
@@ -302,6 +304,21 @@ function PersonalLayoutContent({
         'RECEPCIONISTA',
         'GERENTE',
         'LIMPIEZA'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // TARIFAS DINÁMICAS
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/tarifas',
+      label: 'Tarifas dinámicas',
+      icon: TrendingUp,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'GERENTE'
       ]
     },
 

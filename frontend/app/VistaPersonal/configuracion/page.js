@@ -16,6 +16,17 @@ const CAMPOS_CORTOS = [
   { clave: 'horaCheckOut', etiqueta: 'Check-out hasta (hh:mm)' }
 ];
 
+const REGLAS_TARIFA = [
+  { clave: 'umbralOcupacionAlta', etiqueta: 'Ocupación alta desde (%)' },
+  { clave: 'aumentoOcupacionAlta', etiqueta: 'Aumento por ocupación alta (%)' },
+  { clave: 'aumentoFeriado', etiqueta: 'Aumento en feriado nacional (%)' },
+  { clave: 'aumentoFestividad', etiqueta: 'Aumento en festividad de Ica (%)' },
+  { clave: 'aumentoEvento', etiqueta: 'Aumento por evento (%)' },
+  { clave: 'aumentoTemporadaAlta', etiqueta: 'Aumento en temporada alta (%)' },
+  { clave: 'aumentoMaximo', etiqueta: 'Tope máximo de aumento (%)' },
+  { clave: 'horizonteDias', etiqueta: 'Días a analizar hacia adelante' }
+];
+
 const BLOQUES = [
   { clave: 'descripcion', etiqueta: 'Descripción del hotel', ayuda: 'Cómo presentaría el hotel a un turista.' },
   { clave: 'servicios', etiqueta: 'Servicios', ayuda: 'Piscina, desayuno, wifi, horarios, traslados y costos adicionales.' },
@@ -63,7 +74,7 @@ export default function ConfiguracionPage() {
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-amber-500 text-slate-950"><Settings className="w-6 h-6" /></div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Configuración de la IA</h1>
+            <h1 className="text-lg font-bold text-slate-900">Configuración del negocio e IA</h1>
             <p className="text-xs text-slate-500">
               Información y reglas del negocio que usan el chatbot, el traductor y el asistente.
             </p>
@@ -103,6 +114,25 @@ export default function ConfiguracionPage() {
             <span className="block text-right font-normal text-slate-400">{(datos[b.clave] || '').length} / 4000</span>
           </label>
         ))}
+      </section>
+
+      <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+        <div>
+          <h2 className="text-sm font-bold text-slate-900">Reglas de tarifas dinámicas</h2>
+          <p className="text-xs text-slate-500">
+            El motor suma el aumento del evento y el de ocupación alta, sin pasar el tope. Cada subida espera su aprobación en Tarifas dinámicas.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {REGLAS_TARIFA.map(r => (
+            <label key={r.clave} className="text-xs font-semibold text-slate-700 space-y-1">
+              <span>{r.etiqueta}</span>
+              <input type="number" min={r.clave === 'horizonteDias' ? 7 : 0} max={r.clave === 'horizonteDias' ? 365 : 100}
+                value={datos[r.clave] ?? ''} onChange={e => cambiar(r.clave, e.target.value === '' ? null : Number(e.target.value))}
+                className={campo} />
+            </label>
+          ))}
+        </div>
       </section>
 
       {datos.updatedAt && (

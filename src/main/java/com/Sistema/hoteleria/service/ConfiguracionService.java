@@ -46,6 +46,14 @@ public class ConfiguracionService {
         c.setPoliticas(dto.getPoliticas());
         c.setTurismo(dto.getTurismo());
         c.setReglasAsistente(dto.getReglasAsistente());
+        if (dto.getUmbralOcupacionAlta() != null) c.setUmbralOcupacionAlta(dto.getUmbralOcupacionAlta());
+        if (dto.getAumentoOcupacionAlta() != null) c.setAumentoOcupacionAlta(dto.getAumentoOcupacionAlta());
+        if (dto.getAumentoFeriado() != null) c.setAumentoFeriado(dto.getAumentoFeriado());
+        if (dto.getAumentoFestividad() != null) c.setAumentoFestividad(dto.getAumentoFestividad());
+        if (dto.getAumentoEvento() != null) c.setAumentoEvento(dto.getAumentoEvento());
+        if (dto.getAumentoTemporadaAlta() != null) c.setAumentoTemporadaAlta(dto.getAumentoTemporadaAlta());
+        if (dto.getAumentoMaximo() != null) c.setAumentoMaximo(dto.getAumentoMaximo());
+        if (dto.getHorizonteDias() != null) c.setHorizonteDias(dto.getHorizonteDias());
         c.setActualizadoPor(usuario);
         return aDTO(repository.save(c));
     }
@@ -82,6 +90,32 @@ public class ConfiguracionService {
                 + "RECOMENDACIONES TURÍSTICAS DE ICA\n" + texto(c.getTurismo());
     }
 
+    /** Reglas del motor de tarifas con valores por defecto si el administrador no las definió. */
+    public record ReglasTarifa(int umbralOcupacionAlta, int aumentoOcupacionAlta, int aumentoFeriado,
+                               int aumentoFestividad, int aumentoEvento, int aumentoTemporadaAlta,
+                               int aumentoMaximo, int horizonteDias) { }
+
+    public static ReglasTarifa reglas(ConfiguracionNegocio c) {
+        return new ReglasTarifa(
+                valor(c.getUmbralOcupacionAlta(), 75),
+                valor(c.getAumentoOcupacionAlta(), 15),
+                valor(c.getAumentoFeriado(), 20),
+                valor(c.getAumentoFestividad(), 30),
+                valor(c.getAumentoEvento(), 15),
+                valor(c.getAumentoTemporadaAlta(), 10),
+                valor(c.getAumentoMaximo(), 40),
+                valor(c.getHorizonteDias(), 60));
+    }
+
+    @Transactional
+    public ReglasTarifa reglasTarifa() {
+        return reglas(obtenerEntidad());
+    }
+
+    private static int valor(Integer v, int porDefecto) {
+        return v != null ? v : porDefecto;
+    }
+
     /** Reglas de comportamiento que el administrador define para la IA. */
     @Transactional
     public String reglasAsistente() {
@@ -105,6 +139,14 @@ public class ConfiguracionService {
                 .politicas(c.getPoliticas())
                 .turismo(c.getTurismo())
                 .reglasAsistente(c.getReglasAsistente())
+                .umbralOcupacionAlta(reglas(c).umbralOcupacionAlta())
+                .aumentoOcupacionAlta(reglas(c).aumentoOcupacionAlta())
+                .aumentoFeriado(reglas(c).aumentoFeriado())
+                .aumentoFestividad(reglas(c).aumentoFestividad())
+                .aumentoEvento(reglas(c).aumentoEvento())
+                .aumentoTemporadaAlta(reglas(c).aumentoTemporadaAlta())
+                .aumentoMaximo(reglas(c).aumentoMaximo())
+                .horizonteDias(reglas(c).horizonteDias())
                 .actualizadoPor(c.getActualizadoPor())
                 .updatedAt(c.getUpdatedAt())
                 .build();
