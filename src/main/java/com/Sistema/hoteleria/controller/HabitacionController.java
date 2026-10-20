@@ -10,8 +10,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -85,5 +87,17 @@ public class HabitacionController {
     public ResponseEntity<ApiResponse<Void>> eliminar(@PathVariable Long id) {
         habitacionService.eliminar(id);
         return ResponseEntity.ok(ApiResponse.ok("Habitación eliminada exitosamente", null));
+    }
+
+    /** Sube la foto desde el panel administrativo (multipart, campo "archivo"). */
+    @PostMapping(value = "/{id}/imagen", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<HabitacionDTO>> subirImagen(@PathVariable Long id,
+                                                                @RequestParam("archivo") MultipartFile archivo) {
+        return ResponseEntity.ok(ApiResponse.ok("Imagen actualizada", habitacionService.subirImagen(id, archivo)));
+    }
+
+    @DeleteMapping("/{id}/imagen")
+    public ResponseEntity<ApiResponse<HabitacionDTO>> eliminarImagen(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Imagen eliminada", habitacionService.eliminarImagen(id)));
     }
 }

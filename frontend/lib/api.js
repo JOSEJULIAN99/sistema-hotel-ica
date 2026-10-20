@@ -113,6 +113,19 @@ async function request(endpoint, options = {}) {
   return data.data !== undefined ? data.data : data;
 }
 
+// Envío de archivos (multipart). No fija Content-Type: el navegador agrega el boundary.
+async function requestArchivo(endpoint, formData, method = 'POST') {
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, { method, body: formData, headers: { ...getAuthHeader() } });
+  } catch (err) {
+    throw new Error('No se pudo conectar con el servidor. Verifique que el backend esté en ejecución.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.message || `Error HTTP: ${res.status}`, res.status);
+  return data.data !== undefined ? data.data : data;
+}
+
 // ==================== DASHBOARD ====================
 export const DashboardAPI = {
   async getStats() {
@@ -230,6 +243,17 @@ export const HabitacionAPI = {
       }
       return data;
     }
+  },
+
+  // Foto de la habitación: se guarda en Supabase Storage (o disco del servidor) y se ve en toda la web
+  async subirImagen(id, archivo) {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    return await requestArchivo(`/habitaciones/${id}/imagen`, formData);
+  },
+
+  async eliminarImagen(id) {
+    return await request(`/habitaciones/${id}/imagen`, { method: 'DELETE' });
   },
 
   async updateEstado(id, nuevoEstado) {

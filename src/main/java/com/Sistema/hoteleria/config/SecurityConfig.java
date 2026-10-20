@@ -58,6 +58,7 @@ public class SecurityConfig {
                         // Público
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/registro").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/habitaciones", "/api/habitaciones/**").permitAll()
                         .requestMatchers("/api/publico/**").permitAll()
