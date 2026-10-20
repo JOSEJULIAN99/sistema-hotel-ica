@@ -76,12 +76,23 @@ public class EstadiaServiceImpl implements EstadiaService {
             reservacion = reservacionRepository.findById(dto.getReservacionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Reservación", "id", dto.getReservacionId()));
 
-            if (reservacion.getEstado() == EstadoReservacion.CANCELADA || reservacion.getEstado() == EstadoReservacion.COMPLETADA) {
+            if (reservacion.getEstado() == EstadoReservacion.EN_CURSO) {
+                throw new BadRequestException("La reservación " + reservacion.getCodigoReserva() + " ya tiene check-in registrado");
+            }
+            if (reservacion.getEstado() != EstadoReservacion.CONFIRMADA && reservacion.getEstado() != EstadoReservacion.PENDIENTE) {
                 throw new BadRequestException("La reservación no está en estado válido para Check-In: " + reservacion.getEstado());
+            }
+            LocalDate hoy = LocalDate.now();
+            if (hoy.isBefore(reservacion.getFechaEntrada())) {
+                throw new BadRequestException("La reservación inicia el " + reservacion.getFechaEntrada() + "; el check-in no puede adelantarse");
+            }
+            if (!hoy.isBefore(reservacion.getFechaSalida())) {
+                throw new BadRequestException("La reservación venció el " + reservacion.getFechaSalida());
             }
 
             huesped = reservacion.getHuesped();
             habitacion = reservacion.getHabitacion();
+            validarHabitacionParaCheckIn(habitacion);
             fechaSalida = reservacion.getFechaSalida();
             totalHospedaje = reservacion.getPrecioTotal();
 
@@ -98,17 +109,16 @@ public class EstadiaServiceImpl implements EstadiaService {
             habitacion = habitacionRepository.findById(dto.getHabitacionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Habitación", "id", dto.getHabitacionId()));
 
-            if (habitacion.getEstado() == EstadoHabitacion.OCUPADA) {
-                throw new BadRequestException("La habitación " + habitacion.getNumero() + " ya se encuentra ocupada");
-            }
-            if (habitacion.getEstado() == EstadoHabitacion.LIMPIEZA) {
-                throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en limpieza. Debe completarse la limpieza antes del Check-In");
-            }
-            if (habitacion.getEstado() == EstadoHabitacion.MANTENIMIENTO) {
-                throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en mantenimiento");
-            }
+            validarHabitacionParaCheckIn(habitacion);
 
             fechaSalida = dto.getFechaSalidaEsperada();
+            if (!fechaSalida.isAfter(LocalDate.now())) {
+                throw new BadRequestException("La fecha de salida esperada debe ser posterior a hoy");
+            }
+            if (reservacionRepository.contarReservasSolapadas(habitacion.getId(), LocalDate.now(), fechaSalida) > 0) {
+                throw new BadRequestException("La habitación " + habitacion.getNumero()
+                        + " tiene reservas entre hoy y " + fechaSalida + "; elija otra habitación o use la reserva existente");
+            }
             if (dto.getTotalHospedaje() != null && dto.getTotalHospedaje().compareTo(BigDecimal.ZERO) > 0) {
                 totalHospedaje = dto.getTotalHospedaje();
             } else {
@@ -166,6 +176,20 @@ public class EstadiaServiceImpl implements EstadiaService {
         }
 
         return EntityMapper.toEstadiaDTO(estadiaRepository.findById(estadia.getId()).orElse(estadia));
+    }
+
+    /** Una habitación solo admite check-in si no está ocupada, en limpieza ni en mantenimiento. */
+    private void validarHabitacionParaCheckIn(Habitacion habitacion) {
+        if (habitacion.getEstado() == EstadoHabitacion.OCUPADA
+                || estadiaRepository.findByHabitacionIdAndEstado(habitacion.getId(), EstadoEstadia.ACTIVA).isPresent()) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " ya se encuentra ocupada");
+        }
+        if (habitacion.getEstado() == EstadoHabitacion.LIMPIEZA) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en limpieza. Debe completarse la limpieza antes del Check-In");
+        }
+        if (habitacion.getEstado() == EstadoHabitacion.MANTENIMIENTO) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en mantenimiento");
+        }
     }
 
     @Override

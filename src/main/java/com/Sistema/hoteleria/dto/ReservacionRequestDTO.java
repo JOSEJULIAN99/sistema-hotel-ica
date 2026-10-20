@@ -32,10 +32,10 @@ public class ReservacionRequestDTO {
     @Min(value = 1, message = "Debe haber al menos 1 persona")
     private Integer numeroPersonas;
 
-    @NotNull(message = "El precio total es obligatorio")
-    @DecimalMin(value = "0.0", inclusive = false, message = "El precio total debe ser mayor a 0")
+    // Lo calcula el servidor (noches x tarifa); el valor enviado por el cliente se ignora.
     private BigDecimal precioTotal;
 
+    @DecimalMin(value = "0.0", message = "El adelanto no puede ser negativo")
     private BigDecimal adelanto;
 
     private String observaciones;
