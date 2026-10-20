@@ -2,6 +2,7 @@ package com.Sistema.hoteleria.service.impl;
 
 import com.Sistema.hoteleria.dto.TareaLimpiezaDTO;
 import com.Sistema.hoteleria.dto.TareaLimpiezaRequestDTO;
+import com.Sistema.hoteleria.exception.BadRequestException;
 import com.Sistema.hoteleria.exception.ResourceNotFoundException;
 import com.Sistema.hoteleria.model.entity.Habitacion;
 import com.Sistema.hoteleria.model.entity.TareaLimpieza;
@@ -84,8 +85,8 @@ public class TareaLimpiezaServiceImpl implements TareaLimpiezaService {
                 .fechaCreacion(LocalDateTime.now())
                 .build();
 
-        // Si la habitación no estaba ya en limpieza, la marcamos como LIMPIEZA
-        if (h.getEstado() != EstadoHabitacion.OCUPADA) {
+        // Solo una habitación libre pasa a LIMPIEZA; no se pisan OCUPADA, RESERVADA ni MANTENIMIENTO
+        if (h.getEstado() == EstadoHabitacion.DISPONIBLE) {
             h.setEstado(EstadoHabitacion.LIMPIEZA);
             habitacionRepository.save(h);
         }
@@ -112,11 +113,14 @@ public class TareaLimpiezaServiceImpl implements TareaLimpiezaService {
         TareaLimpieza tarea = tareaLimpiezaRepository.findById(tareaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tarea de Limpieza", "id", tareaId));
 
+        if (tarea.getEstado() != EstadoLimpieza.PENDIENTE) {
+            throw new BadRequestException("Solo se puede iniciar una tarea PENDIENTE. Estado actual: " + tarea.getEstado());
+        }
         tarea.setEstado(EstadoLimpieza.EN_PROCESO);
         tarea.setFechaInicio(LocalDateTime.now());
 
         Habitacion h = tarea.getHabitacion();
-        if (h.getEstado() != EstadoHabitacion.OCUPADA) {
+        if (h.getEstado() == EstadoHabitacion.DISPONIBLE) {
             h.setEstado(EstadoHabitacion.LIMPIEZA);
             habitacionRepository.save(h);
         }
@@ -130,13 +134,18 @@ public class TareaLimpiezaServiceImpl implements TareaLimpiezaService {
         TareaLimpieza tarea = tareaLimpiezaRepository.findById(tareaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tarea de Limpieza", "id", tareaId));
 
+        if (tarea.getEstado() != EstadoLimpieza.PENDIENTE && tarea.getEstado() != EstadoLimpieza.EN_PROCESO) {
+            throw new BadRequestException("La tarea ya está " + tarea.getEstado());
+        }
         tarea.setEstado(EstadoLimpieza.COMPLETADA);
         tarea.setFechaFin(LocalDateTime.now());
-        tareaLimpiezaRepository.save(tarea);
+        tareaLimpiezaRepository.saveAndFlush(tarea);
 
-        // Cuando la limpieza se completa, la habitación pasa automáticamente a DISPONIBLE (salvo que esté ocupada por estadía activa)
+        // La habitación queda DISPONIBLE solo si estaba en LIMPIEZA y no le quedan otras tareas abiertas
         Habitacion h = tarea.getHabitacion();
-        if (h.getEstado() == EstadoHabitacion.LIMPIEZA) {
+        long abiertas = tareaLimpiezaRepository.countByHabitacionIdAndEstadoIn(
+                h.getId(), List.of(EstadoLimpieza.PENDIENTE, EstadoLimpieza.EN_PROCESO));
+        if (h.getEstado() == EstadoHabitacion.LIMPIEZA && abiertas == 0) {
             h.setEstado(EstadoHabitacion.DISPONIBLE);
             habitacionRepository.save(h);
         }

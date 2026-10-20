@@ -158,7 +158,7 @@ public class EstadiaServiceImpl implements EstadiaService {
                     .tipoComprobante("ADELANTO_RESERVA")
                     .notas("Adelanto transferido desde reserva " + reservacion.getCodigoReserva())
                     .build();
-            pagoRepository.save(pagoAdelanto);
+            estadia.getPagos().add(pagoRepository.save(pagoAdelanto));
         }
 
         // Si se realizó un pago inicial en el momento del Check-In
@@ -172,7 +172,7 @@ public class EstadiaServiceImpl implements EstadiaService {
                     .tipoComprobante("BOLETA")
                     .notas("Pago inicial de Check-In")
                     .build();
-            pagoRepository.save(pagoInicial);
+            estadia.getPagos().add(pagoRepository.save(pagoInicial));
         }
 
         return EntityMapper.toEstadiaDTO(estadiaRepository.findById(estadia.getId()).orElse(estadia));
@@ -203,6 +203,12 @@ public class EstadiaServiceImpl implements EstadiaService {
         }
 
         // Registrar pago final si se envía
+        BigDecimal pagoFinalMonto = (dto != null && dto.getPagoFinal() != null) ? dto.getPagoFinal() : BigDecimal.ZERO;
+        if (estadia.getSaldoPendiente().subtract(pagoFinalMonto).compareTo(BigDecimal.ZERO) > 0) {
+            throw new BadRequestException("La estadía tiene un saldo pendiente de S/ "
+                    + estadia.getSaldoPendiente().subtract(pagoFinalMonto)
+                    + ". Registre el pago completo antes del check-out.");
+        }
         if (dto != null && dto.getPagoFinal() != null && dto.getPagoFinal().compareTo(BigDecimal.ZERO) > 0) {
             Pago pagoFinal = Pago.builder()
                     .estadia(estadia)
@@ -287,7 +293,7 @@ public class EstadiaServiceImpl implements EstadiaService {
                 .fechaConsumo(LocalDateTime.now())
                 .build();
 
-        consumoServicioRepository.save(consumo);
+        estadia.getConsumos().add(consumoServicioRepository.save(consumo));
 
         BigDecimal totalConsumosActual = estadia.getTotalConsumos() != null ? estadia.getTotalConsumos() : BigDecimal.ZERO;
         estadia.setTotalConsumos(totalConsumosActual.add(subtotal));
@@ -303,6 +309,13 @@ public class EstadiaServiceImpl implements EstadiaService {
         Estadia estadia = estadiaRepository.findById(estadiaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Estadía", "id", estadiaId));
 
+        if (estadia.getEstado() != EstadoEstadia.ACTIVA) {
+            throw new BadRequestException("No se pueden registrar pagos en una estadía que no está activa");
+        }
+        if (dto.getMonto().compareTo(estadia.getSaldoPendiente()) > 0) {
+            throw new BadRequestException("El pago (S/ " + dto.getMonto() + ") supera el saldo pendiente (S/ " + estadia.getSaldoPendiente() + ")");
+        }
+
         Pago pago = Pago.builder()
                 .estadia(estadia)
                 .monto(dto.getMonto())
@@ -314,8 +327,8 @@ public class EstadiaServiceImpl implements EstadiaService {
                 .notas(dto.getNotas())
                 .build();
 
-        pagoRepository.save(pago);
+        estadia.getPagos().add(pagoRepository.save(pago));
 
-        return EntityMapper.toEstadiaDTO(estadiaRepository.findById(estadiaId).orElse(estadia));
+        return EntityMapper.toEstadiaDTO(estadia);
     }
 }

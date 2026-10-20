@@ -22,6 +22,10 @@ public interface ReservacionRepository extends JpaRepository<Reservacion, Long> 
 
     List<Reservacion> findByHabitacionId(Long habitacionId);
 
+    boolean existsByHabitacionId(Long habitacionId);
+
+    boolean existsByHuespedId(Long huespedId);
+
     List<Reservacion> findByFechaEntrada(LocalDate fechaEntrada);
 
     @Query("SELECT r FROM Reservacion r WHERE " +

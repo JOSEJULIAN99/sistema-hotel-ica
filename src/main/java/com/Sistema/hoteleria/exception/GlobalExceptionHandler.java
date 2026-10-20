@@ -1,6 +1,7 @@
 package com.Sistema.hoteleria.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -54,6 +55,18 @@ public class GlobalExceptionHandler {
         response.put("errors", fieldErrors);
         response.put("timestamp", LocalDateTime.now());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(DataIntegrityViolationException ex) {
+        log.warn("Violación de integridad de datos: {}", ex.getMostSpecificCause().getMessage());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("status", HttpStatus.CONFLICT.value());
+        response.put("error", "Conflicto de datos");
+        response.put("message", "La operación entra en conflicto con datos existentes (registro duplicado o relacionado)");
+        response.put("timestamp", LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
