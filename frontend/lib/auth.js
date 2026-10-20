@@ -2,6 +2,7 @@
 // Hotel Princes Ica
 
 const AUTH_STORAGE_KEY = 'hotel_session_user';
+export const TOKEN_STORAGE_KEY = 'hotel_session_token';
 
 export const AuthAPI = {
   // Obtener usuario actualmente autenticado
@@ -38,8 +39,9 @@ export const AuthAPI = {
       }
 
       const data = await res.json();
-      const user = data.data || data;
-      this.setSession(user);
+      const payload = data.data || data;
+      const user = payload.usuario || payload;
+      this.setSession(user, payload.token);
       return user;
     } catch (err) {
       // Fallback para usuarios maestros en caso de que el backend no esté respondiendo
@@ -64,11 +66,12 @@ export const AuthAPI = {
   async register(userData) {
     const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
     try {
-      const res = await fetch(`${BASE_URL}/usuarios?password=${encodeURIComponent(userData.password || 'hotel123')}`, {
+      const res = await fetch(`${BASE_URL}/usuarios/registro`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: userData.username,
+          password: userData.password,
           nombreCompleto: userData.nombreCompleto,
           email: userData.email,
           telefono: userData.telefono,
@@ -101,10 +104,21 @@ export const AuthAPI = {
       };
     }
   },
-  setSession(user) {
+  // Token JWT emitido por el backend
+  getToken() {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(TOKEN_STORAGE_KEY);
+    } catch (e) {
+      return null;
+    }
+  },
+
+  setSession(user, token) {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
     } catch (e) {
       console.error('Error guardando sesión', e);
     }
@@ -115,6 +129,7 @@ export const AuthAPI = {
     if (typeof window === 'undefined') return;
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.clear(); // Limpia cualquier residuo de roles anteriores
     } catch (e) {
       console.error('Error cerrando sesión', e);

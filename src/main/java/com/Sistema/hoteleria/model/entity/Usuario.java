@@ -1,6 +1,7 @@
 package com.Sistema.hoteleria.model.entity;
 
 import com.Sistema.hoteleria.model.enums.RolUsuario;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 

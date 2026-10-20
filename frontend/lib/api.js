@@ -13,6 +13,17 @@ import {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
+// Token JWT guardado al iniciar sesión (ver lib/auth.js)
+function getAuthHeader() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const token = localStorage.getItem('hotel_session_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (e) {
+    return {};
+  }
+}
+
 // Helper para sincronizar datos locales en navegador
 function getLocalStore(key, defaultVal) {
   if (typeof window === 'undefined') return defaultVal;
@@ -43,6 +54,7 @@ async function request(endpoint, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...getAuthHeader(),
       ...options.headers,
     },
   };
@@ -52,6 +64,15 @@ async function request(endpoint, options = {}) {
     const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
     const res = await fetch(url, { ...config, signal: controller.signal });
     clearTimeout(timeoutId);
+
+    if (res.status === 401 && typeof window !== 'undefined') {
+      // Sesión vencida o inválida: volver al login
+      localStorage.removeItem('hotel_session_user');
+      localStorage.removeItem('hotel_session_token');
+      if (!window.location.pathname.endsWith('/login') && window.location.pathname.startsWith('/VistaPersonal')) {
+        window.location.href = '/VistaPersonal/login';
+      }
+    }
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
