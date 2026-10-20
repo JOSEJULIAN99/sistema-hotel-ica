@@ -79,6 +79,11 @@ public class SecurityConfig {
                                 "/api/estadias/**", "/api/consumos/**", "/api/dashboard/**")
                         .hasAnyRole(ADMIN, GERENTE, RECEPCION)
 
+                        // Asistente IA: cada función según el rol que la usa
+                        .requestMatchers(HttpMethod.POST, "/api/asistente/recomendar").hasAnyRole(ADMIN, GERENTE, RECEPCION)
+                        .requestMatchers("/api/asistente/resumen-diario").hasAnyRole(ADMIN, GERENTE)
+                        .requestMatchers("/api/asistente/**").hasAnyRole(ADMIN, GERENTE, RECEPCION, LIMPIEZA)
+
                         // Limpieza: todo el personal operativo
                         .requestMatchers("/api/limpieza/**").hasAnyRole(ADMIN, GERENTE, RECEPCION, LIMPIEZA)
 

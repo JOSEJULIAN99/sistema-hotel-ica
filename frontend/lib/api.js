@@ -822,3 +822,31 @@ export const UsuarioAPI = {
     }
   }
 };
+// ==================== ASISTENTE IA ====================
+// Sugiere; nunca ejecuta operaciones. Sin modo demo: requiere el backend.
+export const AsistenteAPI = {
+  async estado() {
+    return await request('/asistente/estado');
+  },
+
+  async recomendar({ fechaEntrada, fechaSalida, numeroPersonas, presupuestoPorNoche, preferencias }) {
+    return await request('/asistente/recomendar', {
+      method: 'POST',
+      body: JSON.stringify({
+        fechaEntrada,
+        fechaSalida,
+        numeroPersonas: Number(numeroPersonas),
+        presupuestoPorNoche: presupuestoPorNoche ? Number(presupuestoPorNoche) : null,
+        preferencias: preferencias || null
+      }),
+    });
+  },
+
+  async resumenDiario() {
+    return await request('/asistente/resumen-diario');
+  },
+
+  async limpiezaPriorizada() {
+    return await request('/asistente/limpieza-priorizada');
+  }
+};

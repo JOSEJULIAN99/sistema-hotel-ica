@@ -20,7 +20,8 @@ import {
   Sparkles,
   Package,
   CreditCard,
-  FileText
+  FileText,
+  Bot
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
@@ -282,6 +283,23 @@ function PersonalLayoutContent({
         'ADMIN',
         'RECEPCIONISTA',
         'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // ASISTENTE IA
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/asistente',
+      label: 'Asistente IA',
+      icon: Bot,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'RECEPCIONISTA',
+        'GERENTE',
+        'LIMPIEZA'
       ]
     },
 

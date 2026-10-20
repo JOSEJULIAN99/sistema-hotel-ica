@@ -31,7 +31,7 @@ public interface HabitacionRepository extends JpaRepository<Habitacion, Long> {
 
     @Query("SELECT h FROM Habitacion h WHERE h.id NOT IN (" +
             "SELECT r.habitacion.id FROM Reservacion r " +
-            "WHERE r.estado IN (com.Sistema.hoteleria.model.enums.EstadoReservacion.CONFIRMADA, com.Sistema.hoteleria.model.enums.EstadoReservacion.EN_CURSO) " +
+            "WHERE r.estado IN (com.Sistema.hoteleria.model.enums.EstadoReservacion.PENDIENTE, com.Sistema.hoteleria.model.enums.EstadoReservacion.CONFIRMADA, com.Sistema.hoteleria.model.enums.EstadoReservacion.EN_CURSO) " +
             "AND (r.fechaEntrada < :fechaSalida AND r.fechaSalida > :fechaEntrada)" +
             ") AND h.estado != com.Sistema.hoteleria.model.enums.EstadoHabitacion.MANTENIMIENTO")
     List<Habitacion> findHabitacionesDisponiblesPorFechas(@Param("fechaEntrada") LocalDate fechaEntrada,
