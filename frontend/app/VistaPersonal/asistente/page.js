@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, BedDouble, ClipboardList, Sparkles, RefreshCw } from 'lucide-react';
-import { AsistenteAPI } from '../../../lib/api';
+import { Bot, BedDouble, ClipboardList, Sparkles, RefreshCw, Languages } from 'lucide-react';
+import { AsistenteAPI, TraduccionAPI } from '../../../lib/api';
 import { AuthAPI } from '../../../lib/auth';
 
 // El asistente solo sugiere: reservar, asignar o cambiar estados lo hace siempre una persona.
@@ -60,6 +60,12 @@ export default function AsistentePage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
+  // Traductor
+  const [textoTraducir, setTextoTraducir] = useState('');
+  const [idiomaDestino, setIdiomaDestino] = useState('español');
+  const [traduccion, setTraduccion] = useState(null);
+  const [traduciendo, setTraduciendo] = useState(false);
+
   const esGerencia = ['ADMINISTRADOR', 'ADMIN', 'GERENTE'].includes(rol);
   const usaRecomendador = ['ADMINISTRADOR', 'ADMIN', 'GERENTE', 'RECEPCIONISTA'].includes(rol);
 
@@ -108,6 +114,20 @@ export default function AsistentePage() {
       setError(err.message || 'No se pudo generar la recomendación');
     } finally {
       setCargandoRec(false);
+    }
+  };
+
+  const traducir = async (e) => {
+    e.preventDefault();
+    if (!textoTraducir.trim()) return;
+    setTraduciendo(true);
+    setError('');
+    try {
+      setTraduccion(await TraduccionAPI.traducir(textoTraducir, idiomaDestino));
+    } catch (err) {
+      setError(err.message || 'No se pudo traducir');
+    } finally {
+      setTraduciendo(false);
     }
   };
 
@@ -201,6 +221,41 @@ export default function AsistentePage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </Tarjeta>
+      )}
+
+      {usaRecomendador && (
+        <Tarjeta
+          icono={Languages}
+          titulo="Traductor para turistas"
+          descripcion="Pegue el mensaje del huésped para leerlo en español, o escriba su respuesta y tradúzcala a su idioma."
+        >
+          <form onSubmit={traducir} className="space-y-3">
+            <textarea rows={3} maxLength={2000} value={textoTraducir} onChange={e => setTextoTraducir(e.target.value)}
+              placeholder="Ej.: Hi! Can we leave our bags after check-out?" className={campo} />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-700">Traducir al</span>
+              <select value={idiomaDestino} onChange={e => setIdiomaDestino(e.target.value)} className="p-2 rounded-xl border border-slate-300 text-xs bg-white">
+                {['español', 'inglés', 'portugués', 'francés', 'alemán', 'italiano', 'chino', 'japonés'].map(i => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
+              <button type="submit" disabled={traduciendo || !textoTraducir.trim()}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-60">
+                {traduciendo ? 'Traduciendo…' : 'Traducir'}
+              </button>
+            </div>
+          </form>
+          {traduccion && (
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <p className="text-[11px] text-slate-500">
+                {traduccion.idiomaOrigen ? `Detectado: ${traduccion.idiomaOrigen} → ` : ''}{traduccion.idiomaDestino}
+              </p>
+              <p className="text-xs text-slate-800 whitespace-pre-line">{traduccion.traduccion}</p>
+              <button type="button" onClick={() => navigator.clipboard && navigator.clipboard.writeText(traduccion.traduccion)}
+                className="text-[11px] font-semibold text-amber-700 hover:underline">Copiar</button>
             </div>
           )}
         </Tarjeta>

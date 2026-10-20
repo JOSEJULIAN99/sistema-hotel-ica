@@ -47,7 +47,7 @@ Issue: HPI-10 · Sprint S5 · Rama `chore/despliegue-ci`
 ## 6. Despliegue
 
 ```bash
-cp .env.example .env            # completar claves (DB_PASSWORD, JWT_SECRET, ANTHROPIC_API_KEY opcional)
+cp .env.example .env            # completar claves (DB_PASSWORD, JWT_SECRET, IA_API_KEY de Groq opcional)
 docker compose --profile app up -d --build
 ```
 

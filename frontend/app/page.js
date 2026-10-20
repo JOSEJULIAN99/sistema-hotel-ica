@@ -30,6 +30,7 @@ import {
 import { HabitacionAPI, ReservacionAPI } from '../lib/api';
 import { AuthAPI } from '../lib/auth';
 import ModalReserva from './components/ModalReserva';
+import ChatHuesped from './components/ChatHuesped';
 import ModalHuesped from './components/ModalHuesped';
 import { ToastProvider, useToast } from './components/Toast';
 
@@ -411,6 +412,9 @@ function HotelLandingContent() {
         habitaciones={habitaciones}
         modoPublico
       />
+
+      {/* Chatbot 24/7 para huéspedes */}
+      <ChatHuesped />
     </div>
   );
 }

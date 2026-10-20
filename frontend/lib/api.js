@@ -874,3 +874,31 @@ export const AsistenteAPI = {
     return await request('/asistente/limpieza-priorizada');
   }
 };
+
+// ==================== BASE DE CONOCIMIENTO DE LA IA (admin) ====================
+export const ConfiguracionAPI = {
+  async obtener() {
+    return await request('/configuracion');
+  },
+  async actualizar(datos) {
+    return await request('/configuracion', { method: 'PUT', body: JSON.stringify(datos) });
+  }
+};
+
+// ==================== WEB PÚBLICA: datos del hotel y chatbot 24/7 ====================
+export const PublicoAPI = {
+  async hotel() {
+    return await request('/publico/hotel');
+  },
+  // mensajes: [{ rol: 'usuario' | 'asistente', contenido }]
+  async chat(mensajes) {
+    return await request('/publico/chat', { method: 'POST', body: JSON.stringify({ mensajes }) });
+  }
+};
+
+// ==================== TRADUCCIÓN AUTOMÁTICA (recepción) ====================
+export const TraduccionAPI = {
+  async traducir(texto, idiomaDestino) {
+    return await request('/traduccion', { method: 'POST', body: JSON.stringify({ texto, idiomaDestino }) });
+  }
+};

@@ -12,6 +12,7 @@ import com.Sistema.hoteleria.model.enums.EstadoReservacion;
 import com.Sistema.hoteleria.model.enums.PrioridadLimpieza;
 import com.Sistema.hoteleria.repository.EstadiaRepository;
 import com.Sistema.hoteleria.repository.ReservacionRepository;
+import com.Sistema.hoteleria.service.ConfiguracionService;
 import com.Sistema.hoteleria.service.DashboardService;
 import com.Sistema.hoteleria.service.HabitacionService;
 import com.Sistema.hoteleria.service.TareaLimpiezaService;
@@ -43,7 +44,7 @@ public class AsistenteIAService {
     private static final String FUENTE_REGLAS = "REGLAS";
 
     private static final String INSTRUCCION_BASE =
-            "Eres el asistente interno del Hotel Princes Ica (Ica, Perú). Respondes en español, "
+            "Eres el asistente interno de un hotel en Ica, Perú. Respondes en español, "
             + "en un máximo de 4 oraciones, con tono profesional. Usa solo los datos entregados: "
             + "no inventes habitaciones, precios ni cifras. Montos en soles (S/).";
 
@@ -53,6 +54,7 @@ public class AsistenteIAService {
     private final EstadiaRepository estadiaRepository;
     private final ReservacionRepository reservacionRepository;
     private final ClienteModeloIA clienteIA;
+    private final ConfiguracionService configuracionService;
 
     // ==================== 1. RECOMENDADOR DE HABITACIÓN ====================
 
@@ -107,7 +109,7 @@ public class AsistenteIAService {
                 + ".\nHabitaciones libres ya filtradas por el sistema:\n" + datosParaIA
                 + "\nIndica cuál conviene más y por qué, mencionando solo habitaciones de esta lista.";
 
-        return clienteIA.completar(INSTRUCCION_BASE, pedido)
+        return clienteIA.completar(instruccion(), pedido)
                 .map(texto -> AsistenteRespuestaDTO.<List<OpcionHabitacionDTO>>builder()
                         .fuente(FUENTE_IA).mensaje(texto).datos(opciones).build())
                 .orElseGet(() -> AsistenteRespuestaDTO.<List<OpcionHabitacionDTO>>builder()
@@ -161,7 +163,7 @@ public class AsistenteIAService {
                 + "- Tareas de limpieza abiertas: " + m.getTareasLimpiezaPendientes() + "\n"
                 + "- Ingresos hoy: S/ " + m.getIngresosHoy() + "; mes: S/ " + m.getIngresosMes();
 
-        return clienteIA.completar(INSTRUCCION_BASE, pedido)
+        return clienteIA.completar(instruccion(), pedido)
                 .map(texto -> AsistenteRespuestaDTO.<DashboardStatsDTO>builder()
                         .fuente(FUENTE_IA).mensaje(texto).datos(m).build())
                 .orElseGet(() -> AsistenteRespuestaDTO.<DashboardStatsDTO>builder()
@@ -206,11 +208,18 @@ public class AsistenteIAService {
         String pedido = "Explica al equipo de limpieza el orden de trabajo de hoy. El sistema ya ordenó las tareas así:\n"
                 + lista + "\nNo cambies el orden; explica brevemente el criterio y por dónde empezar.";
 
-        return clienteIA.completar(INSTRUCCION_BASE, pedido)
+        return clienteIA.completar(instruccion(), pedido)
                 .map(texto -> AsistenteRespuestaDTO.<List<TareaLimpiezaDTO>>builder()
                         .fuente(FUENTE_IA).mensaje(texto).datos(tareas).build())
                 .orElseGet(() -> AsistenteRespuestaDTO.<List<TareaLimpiezaDTO>>builder()
                         .fuente(FUENTE_REGLAS).mensaje(reglas).datos(tareas).build());
+    }
+
+    /** Instrucción base + reglas que el administrador definió en el panel. */
+    private String instruccion() {
+        String reglas = configuracionService != null ? configuracionService.reglasAsistente() : null;
+        return reglas == null || reglas.isBlank() ? INSTRUCCION_BASE
+                : INSTRUCCION_BASE + "\nReglas del hotel: " + reglas;
     }
 
     private static int peso(PrioridadLimpieza p) {

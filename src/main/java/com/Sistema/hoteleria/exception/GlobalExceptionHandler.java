@@ -57,6 +57,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<Map<String, Object>> handleTooMany(TooManyRequestsException ex) {
+        return simple(HttpStatus.TOO_MANY_REQUESTS, "Demasiadas solicitudes", ex.getMessage());
+    }
+
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handleNoDisponible(ServicioNoDisponibleException ex) {
+        return simple(HttpStatus.SERVICE_UNAVAILABLE, "Servicio no disponible", ex.getMessage());
+    }
+
+    private ResponseEntity<Map<String, Object>> simple(HttpStatus status, String error, String mensaje) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("status", status.value());
+        response.put("error", error);
+        response.put("message", mensaje);
+        response.put("timestamp", LocalDateTime.now());
+        return new ResponseEntity<>(response, status);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(DataIntegrityViolationException ex) {
         log.warn("Violación de integridad de datos: {}", ex.getMostSpecificCause().getMessage());

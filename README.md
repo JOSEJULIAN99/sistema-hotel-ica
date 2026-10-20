@@ -56,7 +56,15 @@ Las pruebas usan H2 en memoria; no necesitan PostgreSQL. GitHub Actions las ejec
 
 ## Asistente IA
 
-Definir `ANTHROPIC_API_KEY` en `.env` para que el asistente redacte con IA. Sin clave funciona con reglas fijas. El asistente solo sugiere; nunca reserva ni cambia estados por sí mismo.
+La IA es **Llama**, un modelo libre, y se elige en `.env`:
+
+| `IA_PROVEEDOR` | Qué usa | Requisito |
+| --- | --- | --- |
+| `groq` | Llama 3.3 70B en la nube (capa gratuita) | Crear una API key en console.groq.com y ponerla en `IA_API_KEY` |
+| `ollama` | Llama 3.2 en tu PC | Levantar con `--profile ia-local` (descarga ~2 GB la primera vez) |
+| `ninguno` | Sin IA | Todo funciona con respuestas por reglas |
+
+El administrador alimenta la IA desde **Configuración IA** en el panel (datos del hotel, servicios, políticas, turismo y reglas). La IA solo sugiere y responde; nunca reserva ni cambia estados por sí misma.
 
 ## Estructura
 

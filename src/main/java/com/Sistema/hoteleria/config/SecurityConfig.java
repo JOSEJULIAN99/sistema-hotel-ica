@@ -80,6 +80,11 @@ public class SecurityConfig {
                                 "/api/estadias/**", "/api/consumos/**", "/api/dashboard/**")
                         .hasAnyRole(ADMIN, GERENTE, RECEPCION)
 
+                        // Base de conocimiento de la IA: la edita el administrador
+                        .requestMatchers(HttpMethod.GET, "/api/configuracion").hasAnyRole(ADMIN, GERENTE)
+                        .requestMatchers("/api/configuracion/**", "/api/configuracion").hasRole(ADMIN)
+                        .requestMatchers("/api/traduccion/**", "/api/traduccion").hasAnyRole(ADMIN, GERENTE, RECEPCION)
+
                         // Asistente IA: cada función según el rol que la usa
                         .requestMatchers(HttpMethod.POST, "/api/asistente/recomendar").hasAnyRole(ADMIN, GERENTE, RECEPCION)
                         .requestMatchers("/api/asistente/resumen-diario").hasAnyRole(ADMIN, GERENTE)

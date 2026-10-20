@@ -41,6 +41,7 @@ class AsistenteIAServiceTest {
     @Mock private EstadiaRepository estadiaRepository;
     @Mock private ReservacionRepository reservacionRepository;
     @Mock private ClienteModeloIA clienteIA;
+    @Mock private ConfiguracionService configuracionService;
 
     @InjectMocks private AsistenteIAService asistente;
 

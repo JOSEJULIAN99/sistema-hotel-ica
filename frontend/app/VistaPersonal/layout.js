@@ -21,7 +21,8 @@ import {
   Package,
   CreditCard,
   FileText,
-  Bot
+  Bot,
+  Settings
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
@@ -36,7 +37,8 @@ const ACCESO_POR_RUTA = [
   { prefijo: '/VistaPersonal/almacen', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/transacciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/reportes', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
-  { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] }
+  { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] }
 ];
 
 function rutaPermitida(pathname, rol) {
@@ -300,6 +302,20 @@ function PersonalLayoutContent({
         'RECEPCIONISTA',
         'GERENTE',
         'LIMPIEZA'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // CONFIGURACIÓN DE LA IA (base de conocimiento)
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/configuracion',
+      label: 'Configuración IA',
+      icon: Settings,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN'
       ]
     },
 
