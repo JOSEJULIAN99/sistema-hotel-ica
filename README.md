@@ -42,6 +42,27 @@ Sistema web para la gestión del Hotel Princes Ica: habitaciones, huéspedes, re
    npm run dev
    ```
 
+## Todo con Docker
+
+```bash
+cp .env.example .env
+docker compose --profile app up -d --build
+```
+
+Frontend en `http://localhost:3000`, API en `http://localhost:8080/api`.
+
+## Pruebas
+
+```bash
+./mvnw test
+```
+
+Las pruebas usan H2 en memoria; no necesitan PostgreSQL. GitHub Actions las ejecuta en cada Pull Request.
+
+## Asistente IA
+
+Definir `ANTHROPIC_API_KEY` en `.env` para que el asistente redacte con IA. Sin clave funciona con reglas fijas. El asistente solo sugiere; nunca reserva ni cambia estados por sí mismo.
+
 ## Estructura
 
 ```

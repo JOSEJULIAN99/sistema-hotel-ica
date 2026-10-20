@@ -47,6 +47,48 @@ services:
     networks:
       - hotel_network
 
+  # ========================================================
+  # Backend Spring Boot (perfil "app": docker compose --profile app up -d)
+  # ========================================================
+  backend:
+    build: .
+    container_name: hotel_princes_backend
+    profiles: ["app"]
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-hotel_princes_ica}
+      DB_USER: ${DB_USER:-hotel_user}
+      DB_PASSWORD: ${DB_PASSWORD:-hotel_password_123}
+      JWT_SECRET: ${JWT_SECRET:-clave-de-desarrollo-hotel-princes-ica-cambiar-en-produccion}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      TZ: America/Lima
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - hotel_network
+
+  # ========================================================
+  # Frontend Next.js
+  # ========================================================
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+    container_name: hotel_princes_frontend
+    profiles: ["app"]
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - hotel_network
+
 volumes:
   postgres_data:
     name: hotel_princes_postgres_data
