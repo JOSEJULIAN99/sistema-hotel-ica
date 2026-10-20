@@ -9,6 +9,8 @@ import com.Sistema.hoteleria.model.entity.Huesped;
 import com.Sistema.hoteleria.model.entity.Reservacion;
 import com.Sistema.hoteleria.model.enums.EstadoHabitacion;
 import com.Sistema.hoteleria.model.enums.EstadoReservacion;
+import com.Sistema.hoteleria.model.enums.EstadoEstadia;
+import com.Sistema.hoteleria.repository.EstadiaRepository;
 import com.Sistema.hoteleria.repository.HabitacionRepository;
 import com.Sistema.hoteleria.repository.HuespedRepository;
 import com.Sistema.hoteleria.repository.ReservacionRepository;
@@ -34,6 +36,7 @@ public class ReservacionServiceImpl implements ReservacionService {
     private final ReservacionRepository reservacionRepository;
     private final HuespedRepository huespedRepository;
     private final HabitacionRepository habitacionRepository;
+    private final EstadiaRepository estadiaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -114,6 +117,14 @@ public class ReservacionServiceImpl implements ReservacionService {
         if (dto.getNumeroPersonas() > habitacion.getCapacidad()) {
             throw new BadRequestException("La capacidad máxima de la habitación (" + habitacion.getCapacidad() + ") es menor al número de personas (" + dto.getNumeroPersonas() + ")");
         }
+
+        // Una estadía activa (incluye walk-in sin reserva) bloquea la habitación hasta su salida esperada
+        estadiaRepository.findByHabitacionIdAndEstado(habitacion.getId(), EstadoEstadia.ACTIVA)
+                .filter(e -> e.getFechaSalidaEsperada().isAfter(dto.getFechaEntrada()))
+                .ifPresent(e -> {
+                    throw new BadRequestException("La habitación " + habitacion.getNumero()
+                            + " está ocupada hasta el " + e.getFechaSalidaEsperada());
+                });
 
         long solapadas = reservacionRepository.contarReservasSolapadas(
                 habitacion.getId(), dto.getFechaEntrada(), dto.getFechaSalida());
