@@ -25,6 +25,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String PREFIJO = "Bearer ";
+    private static final String RUTA_STREAM = "/api/avisos/stream";
 
     private final JwtService jwtService;
 
@@ -33,9 +34,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header != null && header.startsWith(PREFIJO)
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
-            String token = header.substring(PREFIJO.length());
+        String token = null;
+        if (header != null && header.startsWith(PREFIJO)) {
+            token = header.substring(PREFIJO.length());
+        } else if (RUTA_STREAM.equals(request.getRequestURI())) {
+            // EventSource (avisos en tiempo real) no permite encabezados: el token llega en ?token=
+            token = request.getParameter("token");
+        }
+        if (token != null && !token.isBlank() && SecurityContextHolder.getContext().getAuthentication() == null) {
             jwtService.validar(token).ifPresent(claims -> autenticar(claims, request));
         }
         chain.doFilter(request, response);

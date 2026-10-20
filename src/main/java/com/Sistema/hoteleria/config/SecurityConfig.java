@@ -1,6 +1,7 @@
 package com.Sistema.hoteleria.config;
 
 import com.Sistema.hoteleria.security.JwtAuthFilter;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,6 +57,7 @@ public class SecurityConfig {
                                 escribirError(res, HttpServletResponse.SC_FORBIDDEN, "Su rol no tiene permiso para esta operación")))
                 .authorizeHttpRequests(auth -> auth
                         // Público
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
@@ -93,6 +95,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/asistente/recomendar").hasAnyRole(ADMIN, GERENTE, RECEPCION)
                         .requestMatchers("/api/asistente/resumen-diario").hasAnyRole(ADMIN, GERENTE)
                         .requestMatchers("/api/asistente/**").hasAnyRole(ADMIN, GERENTE, RECEPCION, LIMPIEZA)
+
+                        // Avisos instantáneos e incidencias: todo el personal
+                        .requestMatchers("/api/avisos", "/api/avisos/**", "/api/incidencias", "/api/incidencias/**")
+                        .hasAnyRole(ADMIN, GERENTE, RECEPCION, LIMPIEZA)
 
                         // Limpieza: todo el personal operativo
                         .requestMatchers("/api/limpieza/**").hasAnyRole(ADMIN, GERENTE, RECEPCION, LIMPIEZA)

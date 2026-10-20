@@ -23,10 +23,12 @@ import {
   FileText,
   Bot,
   Settings,
-  TrendingUp
+  TrendingUp,
+  Wrench
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
+import CampanaAvisos from '../components/CampanaAvisos';
 import { AuthAPI } from '../../lib/auth';
 
 // Rutas del panel y roles que pueden abrirlas (además de ocultarlas en el menú).
@@ -253,6 +255,23 @@ function PersonalLayoutContent({
       roles: [
         'ADMINISTRADOR',
         'ADMIN',
+        'LIMPIEZA',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // INCIDENCIAS DE MANTENIMIENTO
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/incidencias',
+      label: 'Incidencias',
+      icon: Wrench,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'RECEPCIONISTA',
         'LIMPIEZA',
         'GERENTE'
       ]
@@ -748,6 +767,9 @@ function PersonalLayoutContent({
         {children}
 
       </main>
+
+      {/* Avisos instantáneos en tiempo real */}
+      <CampanaAvisos rol={rolActual} />
 
     </div>
   );

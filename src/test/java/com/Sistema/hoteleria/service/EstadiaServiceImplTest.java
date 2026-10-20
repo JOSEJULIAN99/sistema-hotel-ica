@@ -17,6 +17,7 @@ import com.Sistema.hoteleria.repository.HuespedRepository;
 import com.Sistema.hoteleria.repository.PagoRepository;
 import com.Sistema.hoteleria.repository.ReservacionRepository;
 import com.Sistema.hoteleria.repository.TareaLimpiezaRepository;
+import com.Sistema.hoteleria.service.avisos.AvisoService;
 import com.Sistema.hoteleria.service.impl.EstadiaServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,7 @@ class EstadiaServiceImplTest {
     @Mock private TareaLimpiezaRepository tareaLimpiezaRepository;
     @Mock private PagoRepository pagoRepository;
     @Mock private ConsumoServicioRepository consumoServicioRepository;
+    @Mock private AvisoService avisoService;
 
     @InjectMocks private EstadiaServiceImpl service;
 

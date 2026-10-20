@@ -955,3 +955,38 @@ export async function cotizarEstancia(habitacionId, entrada, salida) {
   const q = new URLSearchParams({ habitacionId, entrada, salida }).toString();
   return await request(`/publico/cotizacion?${q}`);
 }
+
+// ==================== AVISOS INSTANTÁNEOS E INCIDENCIAS ====================
+export const AvisosAPI = {
+  async recientes() {
+    return await request('/avisos');
+  },
+  async enviar(datos) {
+    return await request('/avisos', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  // URL del canal en tiempo real (EventSource no admite encabezados: el token va en la URL)
+  urlStream() {
+    let token = '';
+    try {
+      token = localStorage.getItem('hotel_session_token') || '';
+    } catch (e) {
+      token = '';
+    }
+    return `${BASE_URL}/avisos/stream?token=${encodeURIComponent(token)}`;
+  }
+};
+
+export const IncidenciasAPI = {
+  async listar(habitacionId) {
+    return await request(`/incidencias${habitacionId ? `?habitacionId=${habitacionId}` : ''}`);
+  },
+  async reportar(datos) {
+    return await request('/incidencias', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async atender(id) {
+    return await request(`/incidencias/${id}/atender`, { method: 'PATCH' });
+  },
+  async resolver(id, solucion) {
+    return await request(`/incidencias/${id}/resolver`, { method: 'PATCH', body: JSON.stringify({ solucion }) });
+  }
+};

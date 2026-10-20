@@ -14,6 +14,9 @@ import com.Sistema.hoteleria.repository.HabitacionRepository;
 import com.Sistema.hoteleria.repository.TareaLimpiezaRepository;
 import com.Sistema.hoteleria.repository.UsuarioRepository;
 import com.Sistema.hoteleria.service.TareaLimpiezaService;
+import com.Sistema.hoteleria.service.avisos.AvisoService;
+import com.Sistema.hoteleria.model.enums.RolUsuario;
+import com.Sistema.hoteleria.model.enums.TipoAviso;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class TareaLimpiezaServiceImpl implements TareaLimpiezaService {
     private final TareaLimpiezaRepository tareaLimpiezaRepository;
     private final HabitacionRepository habitacionRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AvisoService avisoService;
 
     @Override
     @Transactional(readOnly = true)
@@ -91,7 +95,14 @@ public class TareaLimpiezaServiceImpl implements TareaLimpiezaService {
             habitacionRepository.save(h);
         }
 
-        return EntityMapper.toTareaLimpiezaDTO(tareaLimpiezaRepository.save(tarea));
+        TareaLimpiezaDTO creada = EntityMapper.toTareaLimpiezaDTO(tareaLimpiezaRepository.save(tarea));
+        if (tarea.getPrioridad() == PrioridadLimpieza.ALTA || tarea.getPrioridad() == PrioridadLimpieza.URGENTE) {
+            avisoService.enviar(TipoAviso.LIMPIEZA_URGENTE,
+                    "Limpieza " + tarea.getPrioridad() + " en la habitación " + h.getNumero()
+                            + (tarea.getObservaciones() != null ? ": " + tarea.getObservaciones() : "."),
+                    h.getNumero(), RolUsuario.LIMPIEZA, "recepción");
+        }
+        return creada;
     }
 
     @Override
@@ -148,6 +159,9 @@ public class TareaLimpiezaServiceImpl implements TareaLimpiezaService {
         if (h.getEstado() == EstadoHabitacion.LIMPIEZA && abiertas == 0) {
             h.setEstado(EstadoHabitacion.DISPONIBLE);
             habitacionRepository.save(h);
+            avisoService.enviar(TipoAviso.HABITACION_LISTA,
+                    "Habitación " + h.getNumero() + " limpia y disponible para check-in.",
+                    h.getNumero(), RolUsuario.RECEPCIONISTA, "sistema");
         }
 
         return EntityMapper.toTareaLimpiezaDTO(tarea);
