@@ -26,6 +26,26 @@ import {
 import { ToastProvider } from '../components/Toast';
 import { AuthAPI } from '../../lib/auth';
 
+// Rutas del panel y roles que pueden abrirlas (además de ocultarlas en el menú).
+// El backend vuelve a validar cada petición; esto evita pantallas vacías por URL directa.
+const ACCESO_POR_RUTA = [
+  { prefijo: '/VistaPersonal/recepcion', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/reservaciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/huespedes', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/almacen', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/transacciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/reportes', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] }
+];
+
+function rutaPermitida(pathname, rol) {
+  if (pathname === '/VistaPersonal' || pathname === '/VistaPersonal/') {
+    return rol !== 'LIMPIEZA';
+  }
+  const regla = ACCESO_POR_RUTA.find(r => pathname.startsWith(r.prefijo));
+  return !regla || regla.roles.includes(rol);
+}
+
 export default function PersonalLayout({ children }) {
   const pathname = usePathname();
 
@@ -74,6 +94,13 @@ function PersonalLayoutContent({
     if (!activeUser) {
       router.replace(
         '/VistaPersonal/login'
+      );
+    } else if (!rutaPermitida(pathname, String(activeUser.rol || '').toUpperCase())) {
+      // Rol sin acceso a esta pantalla: enviarlo a su vista principal
+      router.replace(
+        String(activeUser.rol || '').toUpperCase() === 'LIMPIEZA'
+          ? '/VistaPersonal/Limpieza'
+          : '/VistaPersonal'
       );
     } else {
       setUsuario(activeUser);

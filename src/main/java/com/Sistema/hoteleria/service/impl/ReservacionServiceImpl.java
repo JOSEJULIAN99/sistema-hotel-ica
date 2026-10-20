@@ -86,6 +86,17 @@ public class ReservacionServiceImpl implements ReservacionService {
     @Override
     @Transactional
     public ReservacionDTO crear(ReservacionRequestDTO dto) {
+        return crearConEstado(dto, EstadoReservacion.CONFIRMADA);
+    }
+
+    /** Reservas de la web pública: quedan PENDIENTES hasta que recepción las confirme. */
+    @Override
+    @Transactional
+    public ReservacionDTO crearPendiente(ReservacionRequestDTO dto) {
+        return crearConEstado(dto, EstadoReservacion.PENDIENTE);
+    }
+
+    private ReservacionDTO crearConEstado(ReservacionRequestDTO dto, EstadoReservacion estadoInicial) {
         if (!dto.getFechaSalida().isAfter(dto.getFechaEntrada())) {
             throw new BadRequestException("La fecha de salida debe ser posterior a la fecha de entrada");
         }
@@ -130,7 +141,7 @@ public class ReservacionServiceImpl implements ReservacionService {
                 .numeroPersonas(dto.getNumeroPersonas())
                 .precioTotal(precioTotal)
                 .adelanto(adelanto)
-                .estado(EstadoReservacion.CONFIRMADA)
+                .estado(estadoInicial)
                 .observaciones(dto.getObservaciones())
                 .build();
 

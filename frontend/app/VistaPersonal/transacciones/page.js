@@ -11,6 +11,7 @@ import {
   TrendingUp,
   RefreshCw
 } from 'lucide-react';
+import { EstadiaAPI } from '../../../lib/api';
 
 export default function TransaccionesPage() {
   const [loading, setLoading] = useState(true);
@@ -18,37 +19,39 @@ export default function TransaccionesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroMetodo, setFiltroMetodo] = useState('TODOS');
 
-  const cargarPagosReales = () => {
-    setLoading(true);
-    try {
-      if (typeof window !== 'undefined') {
-        const estadiasGuardadas = localStorage.getItem('hotel_estadias');
-        let listaEstadias = estadiasGuardadas ? JSON.parse(estadiasGuardadas) : [];
+  const [error, setError] = useState('');
 
-        const todosLosPagos = [];
-        listaEstadias.forEach(estadia => {
-          const pagosEstadia = estadia.pagos || [];
-          pagosEstadia.forEach(pago => {
-            todosLosPagos.push({
-              id: pago.id || `${estadia.id}-${Math.random()}`,
-              codigoReserva: estadia.codigoReserva || 'WALK-IN',
-              huesped: estadia.huesped ? `${estadia.huesped.nombres} ${estadia.huesped.apellidos}` : 'Huésped General',
-              habitacion: estadia.habitacion?.numero || 'N/A',
-              monto: Number(pago.monto || 0),
-              metodoPago: (pago.metodoPago || 'EFECTIVO').toUpperCase(),
-              fechaPago: pago.fechaPago || new Date().toISOString(),
-              nroOperacion: pago.nroOperacion || 'S/N',
-              tipoComprobante: pago.tipoComprobante || 'BOLETA',
-              notas: pago.notas || 'Pago registrado en sistema'
-            });
+  // Los pagos se obtienen de las estadías registradas en el backend
+  const cargarPagosReales = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const listaEstadias = (await EstadiaAPI.getAll()) || [];
+
+      const todosLosPagos = [];
+      listaEstadias.forEach(estadia => {
+        const pagosEstadia = estadia.pagos || [];
+        pagosEstadia.forEach(pago => {
+          todosLosPagos.push({
+            id: pago.id || `${estadia.id}-${pago.fechaPago}`,
+            codigoReserva: estadia.codigoReserva || 'WALK-IN',
+            huesped: estadia.huesped ? `${estadia.huesped.nombres} ${estadia.huesped.apellidos}` : 'Huésped General',
+            habitacion: estadia.habitacion?.numero || 'N/A',
+            monto: Number(pago.monto || 0),
+            metodoPago: (pago.metodoPago || 'EFECTIVO').toUpperCase(),
+            fechaPago: pago.fechaPago || '',
+            nroOperacion: pago.nroOperacion || 'S/N',
+            tipoComprobante: pago.tipoComprobante || 'BOLETA',
+            notas: pago.notas || ''
           });
         });
+      });
 
-        todosLosPagos.sort((a, b) => new Date(b.fechaPago) - new Date(a.fechaPago));
-        setTransacciones(todosLosPagos);
-      }
+      todosLosPagos.sort((a, b) => new Date(b.fechaPago) - new Date(a.fechaPago));
+      setTransacciones(todosLosPagos);
     } catch (err) {
-      console.error('Error al extraer transacciones de check-in', err);
+      console.error('Error al cargar transacciones', err);
+      setError(err.message || 'No se pudieron cargar las transacciones');
     } finally {
       setLoading(false);
     }
@@ -171,6 +174,7 @@ export default function TransaccionesPage() {
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-900">Historial de Cobros de Check-In</h3>
           <span className="text-xs text-slate-500">{transaccionesFiltradas.length} transacciones registradas</span>
+          {error && <span className="text-xs font-semibold text-rose-600">{error}</span>}
         </div>
 
         <div className="overflow-x-auto">
