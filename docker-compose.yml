@@ -1,21 +1,29 @@
+# Sistema Hotel Princes Ica: todo el proyecto con Docker.
+# Las claves se leen de .env (copiar .env.example como .env). Comandos:
+#   docker compose --profile local up -d --build        -> con PostgreSQL local en Docker
+#   docker compose up -d --build                         -> con Supabase (DB_URL en .env)
+#   agregar --profile ia-local                           -> además Llama local con Ollama
+#   agregar --profile herramientas                       -> además pgAdmin
+
+name: hotel-princes-ica
+
 services:
-  # ========================================================
-  # Base de Datos PostgreSQL 16
-  # ========================================================
+  # ------------------------------------------------------------------
+  # Base de datos PostgreSQL 16 (solo con --profile local)
+  # ------------------------------------------------------------------
   db:
     image: postgres:16-alpine
-    container_name: hotel_princes_postgres
+    profiles: ["local"]
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-hotel_princes_ica}
       POSTGRES_USER: ${DB_USER:-hotel_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-hotel_password_123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en .env}
       TZ: America/Lima
     ports:
-      - "5432:5432"
+      - "${DB_PUERTO_HOST:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Montaje automático del script de inicialización con datos reales
       - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -23,78 +31,77 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    networks:
-      - hotel_network
 
-  # ========================================================
-  # pgAdmin 4 (Administrador Web de PostgreSQL)
-  # ========================================================
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: hotel_princes_pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@hotelprincesica.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "5050:80"
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - hotel_network
-
-  # ========================================================
-  # Backend Spring Boot (perfil "app": docker compose --profile app up -d)
-  # ========================================================
+  # ------------------------------------------------------------------
+  # Backend Spring Boot
+  # ------------------------------------------------------------------
   backend:
     build: .
-    container_name: hotel_princes_backend
-    profiles: ["app"]
     restart: unless-stopped
+    env_file: .env
     environment:
-      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-hotel_princes_ica}
-      DB_USER: ${DB_USER:-hotel_user}
-      DB_PASSWORD: ${DB_PASSWORD:-hotel_password_123}
-      JWT_SECRET: ${JWT_SECRET:-clave-de-desarrollo-hotel-princes-ica-cambiar-en-produccion}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Dentro de Docker la base local se llama "db"; con Supabase se usa DB_URL tal cual
+      DB_URL: ${DB_URL_DOCKER:-${DB_URL}}
       TZ: America/Lima
     ports:
-      - "8080:8080"
+      - "${BACKEND_PUERTO_HOST:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - hotel_network
+        required: false
+      ollama:
+        condition: service_started
+        required: false
+    volumes:
+      - uploads_data:/app/uploads
 
-  # ========================================================
+  # ------------------------------------------------------------------
   # Frontend Next.js
-  # ========================================================
+  # ------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
-    container_name: hotel_princes_frontend
-    profiles: ["app"]
+        NEXT_PUBLIC_MODO_DEMO: ${NEXT_PUBLIC_MODO_DEMO:-false}
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PUERTO_HOST:-3000}:3000"
     depends_on:
       - backend
-    networks:
-      - hotel_network
+
+  # ------------------------------------------------------------------
+  # IA local con Ollama y Llama (solo con --profile ia-local)
+  # La primera vez descarga el modelo (~2 GB para llama3.2:3b).
+  # ------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ia-local"]
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull ${OLLAMA_MODELO:-llama3.2:3b} && wait"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  # ------------------------------------------------------------------
+  # pgAdmin (solo con --profile herramientas)
+  # ------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    profiles: ["herramientas"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@hotelprincesica.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Defina PGADMIN_PASSWORD en .env}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
 
 volumes:
   postgres_data:
-    name: hotel_princes_postgres_data
+  uploads_data:
+  ollama_data:
   pgadmin_data:
-    name: hotel_princes_pgadmin_data
-
-networks:
-  hotel_network:
-    name: hotel_princes_network

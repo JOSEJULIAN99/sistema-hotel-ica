@@ -13,43 +13,38 @@ Sistema web para la gestión del Hotel Princes Ica: habitaciones, huéspedes, re
 - Java 21 y Docker Desktop
 - Node.js 20 o superior
 
-## Puesta en marcha
+## Puesta en marcha con Docker (recomendado)
 
-1. Copiar las variables de entorno y completar las claves:
+Solo se necesita Docker Desktop. Funciona igual en Windows, Linux y Mac.
+
+1. Copiar las variables y completar las claves (el archivo `.env` está en `.gitignore`):
 
    ```bash
    cp .env.example .env
-   cp frontend/.env.example frontend/.env.local
    ```
 
-2. Levantar la base de datos:
+2. Elegir la base de datos y levantar todo:
 
-   ```bash
-   docker compose up -d db
-   ```
+   | Caso | Comando |
+   | --- | --- |
+   | PostgreSQL local en Docker | `docker compose --profile local up -d --build` |
+   | Supabase (completar `DB_URL`, `DB_USER`, `DB_PASSWORD` y dejar `DB_URL_DOCKER=` vacío) | `docker compose up -d --build` |
+   | Además IA local con Llama (Ollama) | agregar `--profile ia-local` |
+   | Además pgAdmin en `http://localhost:5050` | agregar `--profile herramientas` |
 
-3. Ejecutar el backend (puerto 8080):
+3. Abrir el frontend en `http://localhost:3000` y el API en `http://localhost:8080/api`.
 
-   ```bash
-   ./mvnw spring-boot:run
-   ```
+Comandos útiles: `docker compose logs -f backend`, `docker compose down` (detener), `docker compose down -v` (detener y borrar datos locales).
 
-4. Ejecutar el frontend (puerto 3000):
+## Ejecutar sin Docker (desarrollo)
 
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-## Todo con Docker
+Requiere Java 21 y Node.js 20 o superior. El backend lee el mismo `.env` de la raíz.
 
 ```bash
-cp .env.example .env
-docker compose --profile app up -d --build
+docker compose --profile local up -d db     # solo la base de datos
+./mvnw spring-boot:run                      # backend en el puerto 8080
+cd frontend && npm install && npm run dev   # frontend en el puerto 3000
 ```
-
-Frontend en `http://localhost:3000`, API en `http://localhost:8080/api`.
 
 ## Pruebas
 
