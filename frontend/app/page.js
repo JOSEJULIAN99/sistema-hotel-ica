@@ -27,7 +27,7 @@ import {
   Lock,
   LogOut
 } from 'lucide-react';
-import { HabitacionAPI, ReservacionAPI } from '../lib/api';
+import { HabitacionAPI, ReservacionAPI, MercadoPagoAPI } from '../lib/api';
 import { AuthAPI } from '../lib/auth';
 import ModalReserva from './components/ModalReserva';
 import ChatHuesped from './components/ChatHuesped';
@@ -78,6 +78,15 @@ function HotelLandingContent() {
       const r = await ReservacionAPI.createPublica(payload);
       addToast(`Solicitud ${r?.codigoReserva || ''} registrada. Recepción confirmará su reserva.`, 'success');
       setModalReservaOpen(false);
+      // Prepago opcional con Mercado Pago: confirma la reserva automáticamente al aprobarse
+      if (r?.codigoReserva && window.confirm(`Reserva ${r.codigoReserva}. ¿Desea pagarla ahora en línea con Mercado Pago?`)) {
+        try {
+          const pago = await MercadoPagoAPI.pagarReserva(r.codigoReserva);
+          if (pago?.urlPago) window.location.href = pago.urlPago;
+        } catch (errPago) {
+          addToast(errPago.message || 'El pago en línea no está disponible; puede pagar en recepción.', 'warning');
+        }
+      }
     } catch (err) {
       addToast(err.message || 'Error al registrar reservación', 'error');
     }

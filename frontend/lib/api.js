@@ -990,3 +990,25 @@ export const IncidenciasAPI = {
     return await request(`/incidencias/${id}/resolver`, { method: 'PATCH', body: JSON.stringify({ solucion }) });
   }
 };
+
+// ==================== MERCADO PAGO (pasarela de pago) ====================
+export const MercadoPagoAPI = {
+  async estado() {
+    return await request('/pagos/mercadopago/estado');
+  },
+  // Link de pago del saldo de una estadía (recepción)
+  async linkEstadia(estadiaId, monto) {
+    return await request(`/pagos/mercadopago/estadias/${estadiaId}`, {
+      method: 'POST',
+      body: JSON.stringify(monto ? { monto: Number(monto) } : {})
+    });
+  },
+  // Prepago de una reserva desde la web pública
+  async pagarReserva(codigoReserva) {
+    return await request(`/publico/reservas/${encodeURIComponent(codigoReserva)}/pagar`, { method: 'POST' });
+  },
+  // Al volver de Mercado Pago se verifica el pago contra su API
+  async verificar(paymentId) {
+    return await request(`/publico/mercadopago/verificar?payment_id=${encodeURIComponent(paymentId)}`, { method: 'POST' });
+  }
+};

@@ -73,6 +73,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/habitaciones/*/estado").hasAnyRole(ADMIN, RECEPCION)
                         .requestMatchers("/api/habitaciones/**").hasRole(ADMIN)
 
+                        // Mercado Pago: recepción genera links; el webhook y la verificación son públicos (/api/publico)
+                        .requestMatchers("/api/pagos/mercadopago", "/api/pagos/mercadopago/**").hasAnyRole(ADMIN, GERENTE, RECEPCION)
+
                         // Caja: eliminar pagos solo administrador
                         .requestMatchers(HttpMethod.DELETE, "/api/pagos/**").hasRole(ADMIN)
                         .requestMatchers("/api/pagos/**").hasAnyRole(ADMIN, GERENTE, RECEPCION)
