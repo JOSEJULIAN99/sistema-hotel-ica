@@ -102,18 +102,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         return false;
     }
 
+    /** Solo el administrador crea cuentas del personal desde el panel (no existe auto-registro). */
     @Override
     @Transactional
     public UsuarioDTO crear(UsuarioRequestDTO dto) {
-        return EntityMapper.toUsuarioDTO(usuarioRepository.save(nuevoUsuario(dto,
-                dto.getRol() != null ? dto.getRol() : RolUsuario.RECEPCIONISTA, true)));
-    }
-
-    /** Registro desde la pantalla pública: queda como RECEPCIONISTA inactivo hasta que un administrador lo active. */
-    @Override
-    @Transactional
-    public UsuarioDTO registrarPendiente(UsuarioRequestDTO dto) {
-        return EntityMapper.toUsuarioDTO(usuarioRepository.save(nuevoUsuario(dto, RolUsuario.RECEPCIONISTA, false)));
+        if (dto.getRol() == null) {
+            throw new BadRequestException("Seleccione el rol del nuevo usuario");
+        }
+        exigirRolDePersonal(dto.getRol());
+        return EntityMapper.toUsuarioDTO(usuarioRepository.save(nuevoUsuario(dto, dto.getRol(), true)));
     }
 
     private Usuario nuevoUsuario(UsuarioRequestDTO dto, RolUsuario rol, boolean activo) {
@@ -135,26 +132,88 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional
-    public UsuarioDTO actualizar(Long id, UsuarioDTO dto) {
-        Usuario u = usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "id", id));
+    public UsuarioDTO actualizar(Long id, UsuarioDTO dto, String solicitante) {
+        Usuario u = buscar(id);
 
-        u.setNombreCompleto(dto.getNombreCompleto());
+        // Las cuentas de clientes solo se activan o desactivan; sus datos los maneja el propio cliente
+        if (u.getRol() == RolUsuario.CLIENTE) {
+            if (dto.getActivo() != null) u.setActivo(dto.getActivo());
+            return EntityMapper.toUsuarioDTO(usuarioRepository.save(u));
+        }
+        if (dto.getRol() != null && dto.getRol() != u.getRol()) {
+            exigirRolDePersonal(dto.getRol());
+            if (u.getUsername().equals(solicitante)) {
+                throw new BadRequestException("No puede cambiar su propio rol");
+            }
+            protegerUltimoAdministrador(u);
+            u.setRol(dto.getRol());
+        }
+        if (dto.getActivo() != null && !dto.getActivo().equals(u.getActivo())) {
+            aplicarActivo(u, dto.getActivo(), solicitante);
+        }
+        if (dto.getNombreCompleto() != null && !dto.getNombreCompleto().isBlank()) {
+            u.setNombreCompleto(dto.getNombreCompleto().trim());
+        }
         u.setEmail(dto.getEmail());
         u.setTelefono(dto.getTelefono());
-        if (dto.getRol() != null) u.setRol(dto.getRol());
         if (dto.getTurno() != null) u.setTurno(dto.getTurno());
-        if (dto.getActivo() != null) u.setActivo(dto.getActivo());
 
         return EntityMapper.toUsuarioDTO(usuarioRepository.save(u));
     }
 
     @Override
     @Transactional
-    public void desactivar(Long id) {
-        Usuario u = usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "id", id));
-        u.setActivo(false);
+    public UsuarioDTO cambiarActivo(Long id, boolean activo, String solicitante) {
+        Usuario u = buscar(id);
+        aplicarActivo(u, activo, solicitante);
+        return EntityMapper.toUsuarioDTO(usuarioRepository.save(u));
+    }
+
+    @Override
+    @Transactional
+    public void restablecerPassword(Long id, String nuevaPassword) {
+        if (nuevaPassword == null || nuevaPassword.length() < 8) {
+            throw new BadRequestException("La nueva contraseña debe tener al menos 8 caracteres");
+        }
+        Usuario u = buscar(id);
+        u.setPassword(passwordEncoder.encode(nuevaPassword));
         usuarioRepository.save(u);
+    }
+
+    @Override
+    @Transactional
+    public void desactivar(Long id, String solicitante) {
+        Usuario u = buscar(id);
+        aplicarActivo(u, false, solicitante);
+        usuarioRepository.save(u);
+    }
+
+    private void aplicarActivo(Usuario u, boolean activo, String solicitante) {
+        if (!activo) {
+            if (u.getUsername().equals(solicitante)) {
+                throw new BadRequestException("No puede desactivar su propia cuenta");
+            }
+            protegerUltimoAdministrador(u);
+        }
+        u.setActivo(activo);
+    }
+
+    /** Siempre debe quedar al menos un administrador activo para poder gestionar el sistema. */
+    private void protegerUltimoAdministrador(Usuario u) {
+        if (u.getRol() == RolUsuario.ADMINISTRADOR && Boolean.TRUE.equals(u.getActivo())
+                && usuarioRepository.countByRolAndActivoTrue(RolUsuario.ADMINISTRADOR) <= 1) {
+            throw new BadRequestException("Debe quedar al menos un administrador activo");
+        }
+    }
+
+    private static void exigirRolDePersonal(RolUsuario rol) {
+        if (rol == RolUsuario.CLIENTE) {
+            throw new BadRequestException("Los clientes crean su cuenta desde la web del hotel; aquí solo se registra al personal");
+        }
+    }
+
+    private Usuario buscar(Long id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", "id", id));
     }
 }

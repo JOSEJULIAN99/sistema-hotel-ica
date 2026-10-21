@@ -25,7 +25,8 @@ import {
   Settings,
   TrendingUp,
   Wrench,
-  Activity
+  Activity,
+  UserCheck
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
@@ -44,7 +45,8 @@ const ACCESO_POR_RUTA = [
   { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] },
   { prefijo: '/VistaPersonal/tarifas', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
-  { prefijo: '/VistaPersonal/monitoreo', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] }
+  { prefijo: '/VistaPersonal/monitoreo', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/usuarios', roles: ['ADMINISTRADOR', 'ADMIN'] }
 ];
 
 function rutaPermitida(pathname, rol) {
@@ -104,6 +106,10 @@ function PersonalLayoutContent({
       router.replace(
         '/VistaPersonal/login'
       );
+    } else if (String(activeUser.rol || '').toUpperCase() === 'CLIENTE') {
+      // Una cuenta de cliente nunca entra al panel del personal
+      AuthAPI.logout();
+      router.replace('/cuenta');
     } else if (!rutaPermitida(pathname, String(activeUser.rol || '').toUpperCase())) {
       // Rol sin acceso a esta pantalla: enviarlo a su vista principal
       router.replace(
@@ -384,6 +390,20 @@ function PersonalLayoutContent({
         'ADMINISTRADOR',
         'ADMIN',
         'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // USUARIOS DEL PERSONAL (alta, roles, activación y contraseñas)
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/usuarios',
+      label: 'Usuarios',
+      icon: UserCheck,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN'
       ]
     }
 

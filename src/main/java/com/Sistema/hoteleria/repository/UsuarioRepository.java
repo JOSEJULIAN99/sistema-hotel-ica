@@ -25,4 +25,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     boolean existsByHuespedId(Long huespedId);
 
     boolean existsByRol(RolUsuario rol);
+
+    long countByRolAndActivoTrue(RolUsuario rol);
 }

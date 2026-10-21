@@ -1,5 +1,6 @@
 package com.Sistema.hoteleria.service;
 
+import com.Sistema.hoteleria.dto.UsuarioRequestDTO;
 import com.Sistema.hoteleria.exception.BadRequestException;
 import com.Sistema.hoteleria.model.entity.Usuario;
 import com.Sistema.hoteleria.model.enums.RolUsuario;
@@ -43,5 +44,40 @@ class UsuarioServiceImplTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("cuenta es de cliente");
         verify(jwtService, never()).generarToken(any());
+    }
+
+    @Test
+    @DisplayName("Desde el panel no se pueden crear cuentas de clientes")
+    void crearRechazaRolCliente() {
+        UsuarioRequestDTO dto = UsuarioRequestDTO.builder().username("nuevo").password("clave-segura")
+                .nombreCompleto("Nuevo").rol(RolUsuario.CLIENTE).build();
+
+        assertThatThrownBy(() -> service.crear(dto))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("solo se registra al personal");
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("No se puede desactivar al último administrador activo")
+    void protegeUltimoAdministrador() {
+        Usuario admin = Usuario.builder().id(1L).username("admin").rol(RolUsuario.ADMINISTRADOR).activo(true).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRolAndActivoTrue(RolUsuario.ADMINISTRADOR)).thenReturn(1L);
+
+        assertThatThrownBy(() -> service.cambiarActivo(1L, false, "otro-admin"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("al menos un administrador");
+    }
+
+    @Test
+    @DisplayName("Un usuario no puede desactivar su propia cuenta")
+    void noSeDesactivaASiMismo() {
+        Usuario pablo = Usuario.builder().id(2L).username("pluna").rol(RolUsuario.RECEPCIONISTA).activo(true).build();
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(pablo));
+
+        assertThatThrownBy(() -> service.desactivar(2L, "pluna"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("propia cuenta");
     }
 }

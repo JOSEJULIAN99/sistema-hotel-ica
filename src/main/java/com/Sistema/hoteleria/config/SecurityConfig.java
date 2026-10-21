@@ -63,7 +63,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/registro").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/habitaciones", "/api/habitaciones/**").permitAll()
                         .requestMatchers("/api/publico/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/cliente/registro", "/api/cliente/login").permitAll()
@@ -74,7 +74,7 @@ public class SecurityConfig {
                         // Portal del cliente: solo su perfil y sus reservas
                         .requestMatchers("/api/cliente/**").hasRole(CLIENTE)
 
-                        // Usuarios: lectura para supervisores, escritura solo administrador
+                        // Usuarios del personal: no hay auto-registro; solo el administrador crea y edita cuentas
                         .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**").hasAnyRole(ADMIN, GERENTE, RECEPCION)
                         .requestMatchers("/api/usuarios/**").hasRole(ADMIN)
 

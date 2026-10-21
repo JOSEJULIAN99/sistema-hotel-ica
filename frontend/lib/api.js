@@ -836,6 +836,23 @@ export const UsuarioAPI = {
       if (rol) list = list.filter(u => u.rol === rol);
       return list;
     }
+  },
+
+  // Alta de personal (solo administrador)
+  async create(datos) {
+    return await request('/usuarios', { method: 'POST', body: JSON.stringify(datos) });
+  },
+
+  async update(id, datos) {
+    return await request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
+  },
+
+  async cambiarActivo(id, activo) {
+    return await request(`/usuarios/${id}/activo?valor=${activo ? 'true' : 'false'}`, { method: 'PATCH' });
+  },
+
+  async restablecerPassword(id, password) {
+    return await request(`/usuarios/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password }) });
   }
 };
 // ==================== ASISTENTE IA ====================

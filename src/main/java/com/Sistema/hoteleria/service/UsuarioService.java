@@ -14,7 +14,8 @@ public interface UsuarioService {
     UsuarioDTO obtenerPorUsername(String username);
     LoginResponseDTO login(String username, String password);
     UsuarioDTO crear(UsuarioRequestDTO dto);
-    UsuarioDTO registrarPendiente(UsuarioRequestDTO dto);
-    UsuarioDTO actualizar(Long id, UsuarioDTO dto);
-    void desactivar(Long id);
+    UsuarioDTO actualizar(Long id, UsuarioDTO dto, String solicitante);
+    UsuarioDTO cambiarActivo(Long id, boolean activo, String solicitante);
+    void restablecerPassword(Long id, String nuevaPassword);
+    void desactivar(Long id, String solicitante);
 }
