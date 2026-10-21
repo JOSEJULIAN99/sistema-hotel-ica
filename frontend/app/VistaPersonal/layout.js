@@ -20,10 +20,16 @@ import {
   Sparkles,
   Package,
   CreditCard,
-  FileText
+  FileText,
+  Bot,
+  Settings,
+  TrendingUp,
+  Wrench,
+  Activity
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
+import CampanaAvisos from '../components/CampanaAvisos';
 import { AuthAPI } from '../../lib/auth';
 
 // Rutas del panel y roles que pueden abrirlas (además de ocultarlas en el menú).
@@ -35,7 +41,10 @@ const ACCESO_POR_RUTA = [
   { prefijo: '/VistaPersonal/almacen', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/transacciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
   { prefijo: '/VistaPersonal/reportes', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
-  { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] }
+  { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] },
+  { prefijo: '/VistaPersonal/tarifas', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/monitoreo', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] }
 ];
 
 function rutaPermitida(pathname, rol) {
@@ -254,6 +263,23 @@ function PersonalLayoutContent({
     },
 
     // ----------------------------------------------------------
+    // INCIDENCIAS DE MANTENIMIENTO
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/incidencias',
+      label: 'Incidencias',
+      icon: Wrench,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'RECEPCIONISTA',
+        'LIMPIEZA',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
     // ALMACÉN
     // ----------------------------------------------------------
 
@@ -282,6 +308,67 @@ function PersonalLayoutContent({
         'ADMIN',
         'RECEPCIONISTA',
         'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // ASISTENTE IA
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/asistente',
+      label: 'Asistente IA',
+      icon: Bot,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'RECEPCIONISTA',
+        'GERENTE',
+        'LIMPIEZA'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // MONITOREO DEL SISTEMA
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/monitoreo',
+      label: 'Monitoreo',
+      icon: Activity,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // TARIFAS DINÁMICAS
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/tarifas',
+      label: 'Tarifas dinámicas',
+      icon: TrendingUp,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // CONFIGURACIÓN DE LA IA (base de conocimiento)
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/configuracion',
+      label: 'Configuración IA',
+      icon: Settings,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN'
       ]
     },
 
@@ -697,6 +784,9 @@ function PersonalLayoutContent({
         {children}
 
       </main>
+
+      {/* Avisos instantáneos en tiempo real */}
+      <CampanaAvisos rol={rolActual} />
 
     </div>
   );

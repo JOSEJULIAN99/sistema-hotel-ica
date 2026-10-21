@@ -113,6 +113,19 @@ async function request(endpoint, options = {}) {
   return data.data !== undefined ? data.data : data;
 }
 
+// Envío de archivos (multipart). No fija Content-Type: el navegador agrega el boundary.
+async function requestArchivo(endpoint, formData, method = 'POST') {
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, { method, body: formData, headers: { ...getAuthHeader() } });
+  } catch (err) {
+    throw new Error('No se pudo conectar con el servidor. Verifique que el backend esté en ejecución.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.message || `Error HTTP: ${res.status}`, res.status);
+  return data.data !== undefined ? data.data : data;
+}
+
 // ==================== DASHBOARD ====================
 export const DashboardAPI = {
   async getStats() {
@@ -230,6 +243,17 @@ export const HabitacionAPI = {
       }
       return data;
     }
+  },
+
+  // Foto de la habitación: se guarda en Supabase Storage (o disco del servidor) y se ve en toda la web
+  async subirImagen(id, archivo) {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    return await requestArchivo(`/habitaciones/${id}/imagen`, formData);
+  },
+
+  async eliminarImagen(id) {
+    return await request(`/habitaciones/${id}/imagen`, { method: 'DELETE' });
   },
 
   async updateEstado(id, nuevoEstado) {
@@ -820,5 +844,178 @@ export const UsuarioAPI = {
       if (rol) list = list.filter(u => u.rol === rol);
       return list;
     }
+  }
+};
+// ==================== ASISTENTE IA ====================
+// Sugiere; nunca ejecuta operaciones. Sin modo demo: requiere el backend.
+export const AsistenteAPI = {
+  async estado() {
+    return await request('/asistente/estado');
+  },
+
+  async recomendar({ fechaEntrada, fechaSalida, numeroPersonas, presupuestoPorNoche, preferencias }) {
+    return await request('/asistente/recomendar', {
+      method: 'POST',
+      body: JSON.stringify({
+        fechaEntrada,
+        fechaSalida,
+        numeroPersonas: Number(numeroPersonas),
+        presupuestoPorNoche: presupuestoPorNoche ? Number(presupuestoPorNoche) : null,
+        preferencias: preferencias || null
+      }),
+    });
+  },
+
+  async resumenDiario() {
+    return await request('/asistente/resumen-diario');
+  },
+
+  async limpiezaPriorizada() {
+    return await request('/asistente/limpieza-priorizada');
+  }
+};
+
+// ==================== BASE DE CONOCIMIENTO DE LA IA (admin) ====================
+export const ConfiguracionAPI = {
+  async obtener() {
+    return await request('/configuracion');
+  },
+  async actualizar(datos) {
+    return await request('/configuracion', { method: 'PUT', body: JSON.stringify(datos) });
+  }
+};
+
+// ==================== WEB PÚBLICA: datos del hotel y chatbot 24/7 ====================
+export const PublicoAPI = {
+  async hotel() {
+    return await request('/publico/hotel');
+  },
+  // mensajes: [{ rol: 'usuario' | 'asistente', contenido }]
+  async chat(mensajes) {
+    return await request('/publico/chat', { method: 'POST', body: JSON.stringify({ mensajes }) });
+  }
+};
+
+// ==================== TRADUCCIÓN AUTOMÁTICA (recepción) ====================
+export const TraduccionAPI = {
+  async traducir(texto, idiomaDestino) {
+    return await request('/traduccion', { method: 'POST', body: JSON.stringify({ texto, idiomaDestino }) });
+  }
+};
+
+// ==================== TARIFAS DINÁMICAS (admin y gerencia) ====================
+export const TarifasAPI = {
+  async pendientes() {
+    return await request('/tarifas/recomendaciones');
+  },
+  async historial() {
+    return await request('/tarifas/historial');
+  },
+  async analizar(desde, hasta) {
+    const q = new URLSearchParams();
+    if (desde) q.set('desde', desde);
+    if (hasta) q.set('hasta', hasta);
+    const qs = q.toString();
+    return await request(`/tarifas/analizar${qs ? '?' + qs : ''}`, { method: 'POST' });
+  },
+  async decidir(id, aprobar, porcentaje, comentario) {
+    return await request(`/tarifas/recomendaciones/${id}/decidir`, {
+      method: 'PATCH',
+      body: JSON.stringify({ aprobar, porcentaje: porcentaje === '' || porcentaje == null ? null : Number(porcentaje), comentario: comentario || null })
+    });
+  },
+  async temporadas() {
+    return await request('/tarifas/temporadas');
+  },
+  async crearTemporada(datos) {
+    return await request('/tarifas/temporadas', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async desactivarTemporada(id) {
+    return await request(`/tarifas/temporadas/${id}/desactivar`, { method: 'PATCH' });
+  }
+};
+
+export const EventosAPI = {
+  async listar() {
+    return await request('/eventos');
+  },
+  async crear(datos) {
+    return await request('/eventos', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async actualizar(id, datos) {
+    return await request(`/eventos/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
+  },
+  async eliminar(id) {
+    return await request(`/eventos/${id}`, { method: 'DELETE' });
+  }
+};
+
+// Precio de una estancia con las tarifas de temporada vigentes (público)
+export async function cotizarEstancia(habitacionId, entrada, salida) {
+  const q = new URLSearchParams({ habitacionId, entrada, salida }).toString();
+  return await request(`/publico/cotizacion?${q}`);
+}
+
+// ==================== AVISOS INSTANTÁNEOS E INCIDENCIAS ====================
+export const AvisosAPI = {
+  async recientes() {
+    return await request('/avisos');
+  },
+  async enviar(datos) {
+    return await request('/avisos', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  // URL del canal en tiempo real (EventSource no admite encabezados: el token va en la URL)
+  urlStream() {
+    let token = '';
+    try {
+      token = localStorage.getItem('hotel_session_token') || '';
+    } catch (e) {
+      token = '';
+    }
+    return `${BASE_URL}/avisos/stream?token=${encodeURIComponent(token)}`;
+  }
+};
+
+export const IncidenciasAPI = {
+  async listar(habitacionId) {
+    return await request(`/incidencias${habitacionId ? `?habitacionId=${habitacionId}` : ''}`);
+  },
+  async reportar(datos) {
+    return await request('/incidencias', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async atender(id) {
+    return await request(`/incidencias/${id}/atender`, { method: 'PATCH' });
+  },
+  async resolver(id, solucion) {
+    return await request(`/incidencias/${id}/resolver`, { method: 'PATCH', body: JSON.stringify({ solucion }) });
+  }
+};
+
+// ==================== MERCADO PAGO (pasarela de pago) ====================
+export const MercadoPagoAPI = {
+  async estado() {
+    return await request('/pagos/mercadopago/estado');
+  },
+  // Link de pago del saldo de una estadía (recepción)
+  async linkEstadia(estadiaId, monto) {
+    return await request(`/pagos/mercadopago/estadias/${estadiaId}`, {
+      method: 'POST',
+      body: JSON.stringify(monto ? { monto: Number(monto) } : {})
+    });
+  },
+  // Prepago de una reserva desde la web pública
+  async pagarReserva(codigoReserva) {
+    return await request(`/publico/reservas/${encodeURIComponent(codigoReserva)}/pagar`, { method: 'POST' });
+  },
+  // Al volver de Mercado Pago se verifica el pago contra su API
+  async verificar(paymentId) {
+    return await request(`/publico/mercadopago/verificar?payment_id=${encodeURIComponent(paymentId)}`, { method: 'POST' });
+  }
+};
+
+// ==================== MONITOREO (administrador y gerencia) ====================
+export const MonitoreoAPI = {
+  async resumen() {
+    return await request('/monitoreo');
   }
 };

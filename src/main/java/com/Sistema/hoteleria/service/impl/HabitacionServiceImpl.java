@@ -11,6 +11,8 @@ import com.Sistema.hoteleria.repository.EstadiaRepository;
 import com.Sistema.hoteleria.repository.HabitacionRepository;
 import com.Sistema.hoteleria.repository.ReservacionRepository;
 import com.Sistema.hoteleria.repository.TareaLimpiezaRepository;
+import com.Sistema.hoteleria.service.storage.StorageService;
+import org.springframework.web.multipart.MultipartFile;
 import com.Sistema.hoteleria.service.HabitacionService;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,11 @@ public class HabitacionServiceImpl implements HabitacionService {
     private final ReservacionRepository reservacionRepository;
     private final EstadiaRepository estadiaRepository;
     private final TareaLimpiezaRepository tareaLimpiezaRepository;
+    private final StorageService storageService;
+
+    private static final long MAX_BYTES_IMAGEN = 3L * 1024 * 1024;
+    private static final Map<String, String> EXTENSIONES = Map.of(
+            "image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
 
     @Override
     @Transactional(readOnly = true)
@@ -157,5 +166,45 @@ public class HabitacionServiceImpl implements HabitacionService {
             throw new BadRequestException("La habitación tiene historial de reservas, estadías o limpieza; márquela en MANTENIMIENTO en lugar de eliminarla");
         }
         habitacionRepository.deleteById(id);
+    }
+
+    /** Sube la foto de la habitación (JPG, PNG o WEBP, hasta 3 MB) y reemplaza la anterior. */
+    @Override
+    @Transactional
+    public HabitacionDTO subirImagen(Long id, MultipartFile archivo) {
+        Habitacion h = habitacionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Habitación", "id", id));
+        if (archivo == null || archivo.isEmpty()) {
+            throw new BadRequestException("Seleccione una imagen");
+        }
+        String extension = EXTENSIONES.get(archivo.getContentType());
+        if (extension == null) {
+            throw new BadRequestException("Formato no permitido. Use JPG, PNG o WEBP");
+        }
+        if (archivo.getSize() > MAX_BYTES_IMAGEN) {
+            throw new BadRequestException("La imagen supera los 3 MB");
+        }
+        byte[] contenido;
+        try {
+            contenido = archivo.getBytes();
+        } catch (IOException e) {
+            throw new BadRequestException("No se pudo leer la imagen");
+        }
+        String anterior = h.getImagenUrl();
+        String ruta = "habitacion-" + h.getNumero() + "-" + System.currentTimeMillis() + "." + extension;
+        h.setImagenUrl(storageService.guardar(ruta, contenido, archivo.getContentType()));
+        HabitacionDTO dto = EntityMapper.toHabitacionDTO(habitacionRepository.save(h));
+        storageService.eliminar(anterior);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public HabitacionDTO eliminarImagen(Long id) {
+        Habitacion h = habitacionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Habitación", "id", id));
+        storageService.eliminar(h.getImagenUrl());
+        h.setImagenUrl(null);
+        return EntityMapper.toHabitacionDTO(habitacionRepository.save(h));
     }
 }

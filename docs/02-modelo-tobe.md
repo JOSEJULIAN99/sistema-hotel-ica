@@ -92,5 +92,5 @@ flowchart LR
 | Priorización de limpieza | `GET /api/asistente/limpieza-priorizada` | Limpieza | Orden sugerido de tareas | El supervisor acepta o cambia |
 
 - Las opciones siempre salen de la base de datos con reglas fijas; el modelo solo redacta la explicación.
-- Sin clave `ANTHROPIC_API_KEY`, el asistente responde solo con reglas.
+- La IA es Llama (modelo libre) vía Groq u Ollama (`IA_PROVEEDOR`); sin IA, el asistente responde solo con reglas.
 - Al modelo no se envían nombres, documentos ni teléfonos de huéspedes.

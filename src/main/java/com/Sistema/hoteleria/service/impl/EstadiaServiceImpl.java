@@ -7,6 +7,7 @@ import com.Sistema.hoteleria.model.entity.*;
 import com.Sistema.hoteleria.model.enums.*;
 import com.Sistema.hoteleria.repository.*;
 import com.Sistema.hoteleria.service.EstadiaService;
+import com.Sistema.hoteleria.service.avisos.AvisoService;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class EstadiaServiceImpl implements EstadiaService {
     private final TareaLimpiezaRepository tareaLimpiezaRepository;
     private final PagoRepository pagoRepository;
     private final ConsumoServicioRepository consumoServicioRepository;
+    private final AvisoService avisoService;
 
     @Override
     @Transactional(readOnly = true)
@@ -253,6 +255,11 @@ public class EstadiaServiceImpl implements EstadiaService {
                 .fechaCreacion(LocalDateTime.now())
                 .build();
         tareaLimpiezaRepository.save(tarea);
+
+        // Aviso instantáneo al personal de limpieza
+        avisoService.enviar(TipoAviso.CHECK_OUT,
+                "Check-out en la habitación " + hab.getNumero() + ": limpieza prioritaria (tarea creada).",
+                hab.getNumero(), RolUsuario.LIMPIEZA, "sistema");
 
         BigDecimal saldoFinal = estadia.getSaldoPendiente();
 
