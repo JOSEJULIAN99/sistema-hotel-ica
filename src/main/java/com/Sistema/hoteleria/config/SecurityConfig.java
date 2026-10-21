@@ -25,7 +25,8 @@ import java.util.List;
 
 /**
  * Seguridad del API: sesión sin estado con JWT y permisos por rol.
- * Roles: ADMINISTRADOR, GERENTE, RECEPCIONISTA, LIMPIEZA.
+ * Roles del personal: ADMINISTRADOR, GERENTE, RECEPCIONISTA, LIMPIEZA.
+ * Los clientes (rol CLIENTE) solo usan /api/cliente/** y las rutas públicas.
  */
 @Configuration
 @EnableWebSecurity
@@ -36,6 +37,7 @@ public class SecurityConfig {
     private static final String GERENTE = "GERENTE";
     private static final String RECEPCION = "RECEPCIONISTA";
     private static final String LIMPIEZA = "LIMPIEZA";
+    private static final String CLIENTE = "CLIENTE";
 
     private final JwtAuthFilter jwtAuthFilter;
 
@@ -61,14 +63,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/registro").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/habitaciones", "/api/habitaciones/**").permitAll()
                         .requestMatchers("/api/publico/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/cliente/registro", "/api/cliente/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasRole(ADMIN)
                         .requestMatchers("/api/monitoreo", "/api/monitoreo/**").hasAnyRole(ADMIN, GERENTE)
 
-                        // Usuarios: lectura para supervisores, escritura solo administrador
+                        // Portal del cliente: solo su perfil y sus reservas
+                        .requestMatchers("/api/cliente/**").hasRole(CLIENTE)
+
+                        // Usuarios del personal: no hay auto-registro; solo el administrador crea y edita cuentas
                         .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**").hasAnyRole(ADMIN, GERENTE, RECEPCION)
                         .requestMatchers("/api/usuarios/**").hasRole(ADMIN)
 

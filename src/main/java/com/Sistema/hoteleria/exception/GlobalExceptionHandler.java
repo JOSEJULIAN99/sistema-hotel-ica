@@ -39,19 +39,32 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    /** Errores por campo de las reglas de negocio (ValidadorDatos): el formulario los muestra junto a cada campo. */
+    @ExceptionHandler(DatosInvalidosException.class)
+    public ResponseEntity<Map<String, Object>> handleDatosInvalidos(DatosInvalidosException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Error de validación de datos");
+        response.put("message", ex.getMessage());
+        response.put("errors", ex.getErrores());
+        response.put("timestamp", LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            fieldErrors.put(fieldName, errorMessage);
+            String fieldName = error instanceof FieldError fe ? fe.getField() : error.getObjectName();
+            fieldErrors.putIfAbsent(fieldName, error.getDefaultMessage());
         });
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
         response.put("status", HttpStatus.BAD_REQUEST.value());
         response.put("error", "Error de validación de datos");
+        response.put("message", String.join(". ", fieldErrors.values()));
         response.put("errors", fieldErrors);
         response.put("timestamp", LocalDateTime.now());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);

@@ -48,33 +48,7 @@ export const AuthAPI = {
     return user;
   },
 
-  // Solicitar una cuenta nueva: queda inactiva hasta que un administrador la active
-  async register(userData) {
-    let res;
-    try {
-      res = await fetch(`${BASE_URL}/usuarios/registro`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: userData.username,
-          password: userData.password,
-          nombreCompleto: userData.nombreCompleto,
-          email: userData.email,
-          telefono: userData.telefono,
-          turno: userData.turno || 'Mañana'
-        }),
-      });
-    } catch (err) {
-      throw new Error('No se pudo conectar con el servidor. Verifique que el backend esté en ejecución.');
-    }
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const detalle = data.errors ? Object.values(data.errors).join('. ') : null;
-      throw new Error(detalle || data.message || 'Error al registrar usuario');
-    }
-    return { usuario: data.data, mensaje: data.message };
-  },
+  // No hay registro público del personal: las cuentas las crea el administrador en el panel (Usuarios).
 
   // Token JWT emitido por el backend
   getToken() {

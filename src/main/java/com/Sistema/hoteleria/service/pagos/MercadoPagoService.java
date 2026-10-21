@@ -41,7 +41,8 @@ import java.util.UUID;
  * 2. El huésped paga con tarjeta o billetera en la página de Mercado Pago.
  * 3. Mercado Pago avisa por webhook; el sistema CONSULTA el pago en la API de Mercado Pago
  *    (no confía en lo que llega en la notificación) y solo si está aprobado registra el Pago.
- * Con credenciales TEST- todo funciona en modo de prueba (sandbox), sin dinero real.
+ * Modo prueba: credenciales TEST- o credenciales APP_USR- de una cuenta de prueba (MP_MODO=prueba).
+ * En prueba no se mueve dinero real; se paga con un comprador de prueba y tarjetas de prueba.
  */
 @Slf4j
 @Service
@@ -58,6 +59,7 @@ public class MercadoPagoService {
     private final String secretoWebhook;
     private final String urlFrontend;
     private final String urlBackendPublica;
+    private final String modo;
 
     public MercadoPagoService(RestClient.Builder builder,
                               PagoOnlineRepository pagoOnlineRepository,
@@ -67,7 +69,8 @@ public class MercadoPagoService {
                               @Value("${mercadopago.access-token:}") String accessToken,
                               @Value("${mercadopago.webhook-secret:}") String secretoWebhook,
                               @Value("${app.frontend-url:http://localhost:3000}") String urlFrontend,
-                              @Value("${app.backend-public-url:}") String urlBackendPublica) {
+                              @Value("${app.backend-public-url:}") String urlBackendPublica,
+                              @Value("${mercadopago.modo:prueba}") String modo) {
         this.restClient = builder.build();
         this.pagoOnlineRepository = pagoOnlineRepository;
         this.estadiaRepository = estadiaRepository;
@@ -77,6 +80,7 @@ public class MercadoPagoService {
         this.secretoWebhook = secretoWebhook;
         this.urlFrontend = sinBarra(urlFrontend);
         this.urlBackendPublica = sinBarra(urlBackendPublica);
+        this.modo = modo == null ? "prueba" : modo.trim().toLowerCase();
     }
 
     private static String sinBarra(String url) {
@@ -87,8 +91,12 @@ public class MercadoPagoService {
         return accessToken != null && !accessToken.isBlank();
     }
 
+    /**
+     * Las credenciales TEST- siempre son de prueba. Las APP_USR- pueden ser de una cuenta de prueba
+     * (las que Mercado Pago entrega hoy para probar) o de producción: lo decide MP_MODO.
+     */
     public boolean modoPrueba() {
-        return configurado() && accessToken.startsWith("TEST-");
+        return configurado() && (accessToken.startsWith("TEST-") || !"produccion".equals(modo));
     }
 
     // ==================== CREAR LINK DE PAGO ====================
@@ -181,7 +189,8 @@ public class MercadoPagoService {
             throw new ServicioNoDisponibleException("Mercado Pago no devolvió el link de pago");
         }
         po.setPreferenciaId(String.valueOf(respuesta.get("id")));
-        Object url = modoPrueba() && respuesta.get("sandbox_init_point") != null
+        // sandbox_init_point solo sirve con credenciales TEST-; con APP_USR (cuenta de prueba o real) se usa init_point
+        Object url = accessToken.startsWith("TEST-") && respuesta.get("sandbox_init_point") != null
                 ? respuesta.get("sandbox_init_point") : respuesta.get("init_point");
         po.setUrlPago(url != null ? url.toString() : null);
         return pagoOnlineRepository.save(po);

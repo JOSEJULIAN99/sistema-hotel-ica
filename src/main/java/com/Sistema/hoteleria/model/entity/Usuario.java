@@ -46,6 +46,12 @@ public class Usuario {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    /** Solo para cuentas CLIENTE: ficha de huésped con sus datos y reservas. */
+    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "huesped_id", unique = true)
+    private Huesped huesped;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

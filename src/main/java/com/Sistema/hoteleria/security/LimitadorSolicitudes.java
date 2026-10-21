@@ -26,7 +26,7 @@ public class LimitadorSolicitudes {
                 marcas.pollFirst();
             }
             if (marcas.size() >= maximoPorMinuto) {
-                throw new TooManyRequestsException("Ha enviado muchos mensajes seguidos. Espere un minuto e intente de nuevo.");
+                throw new TooManyRequestsException("Demasiados intentos seguidos. Espere un minuto e intente de nuevo.");
             }
             marcas.addLast(ahora);
         }

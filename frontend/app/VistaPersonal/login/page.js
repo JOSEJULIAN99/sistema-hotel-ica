@@ -1,504 +1,140 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Hotel, KeyRound, Lock, User, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { AuthAPI } from '../../../lib/auth';
 import { useToast } from '../../components/Toast';
 
-export default function LoginPage() {
+// Ingreso exclusivo del personal del hotel. Las cuentas las crea el administrador en "Usuarios";
+// los clientes ingresan desde la web pública (/cuenta).
+function rutaInicial(rol) {
+  const r = String(rol || '').toUpperCase();
+  if (r === 'LIMPIEZA') return '/VistaPersonal/Limpieza';
+  return '/VistaPersonal';
+}
+
+export default function LoginPersonalPage() {
   const router = useRouter();
   const { addToast } = useToast();
-
-  // =========================================================
-  // REDIRECCIÓN SEGÚN ROL
-  // =========================================================
-  const redirigirSegunRol = (rol) => {
-    const rolNormalizado = String(rol || '').toUpperCase();
-
-    // Administrador, recepcionista y gerente
-    // utilizan el mismo Dashboard, pero cada uno
-    // verá diferentes módulos según su rol.
-    if (
-      rolNormalizado === 'ADMINISTRADOR' ||
-      rolNormalizado === 'ADMIN' ||
-      rolNormalizado === 'RECEPCIONISTA' ||
-      rolNormalizado === 'GERENTE'
-    ) {
-      router.push('/VistaPersonal');
-      return;
-    }
-
-    // Limpieza entra directamente al módulo
-    // donde puede consultar habitaciones y trabajar
-    // con el proceso de limpieza.
-    if (rolNormalizado === 'LIMPIEZA') {
-      router.push('/VistaPersonal/habitaciones');
-      return;
-    }
-
-    // Si aparece un rol no contemplado,
-    // se utiliza el Dashboard general.
-    router.push('/VistaPersonal');
-  };
-
-  // =========================================================
-  // MODO LOGIN / REGISTRO
-  // =========================================================
-  const [isRegister, setIsRegister] = useState(false);
-
-  // =========================================================
-  // CAMPOS DE LOGIN
-  // =========================================================
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
 
-  // =========================================================
-  // CAMPOS DE REGISTRO
-  // =========================================================
-  const [regNombre, setRegNombre] = useState('');
-  const [regUsername, setRegUsername] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regTelefono, setRegTelefono] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
-
-  const [loading, setLoading] = useState(false);
-
-  // =========================================================
-  // COMPROBAR SI YA EXISTE UNA SESIÓN
-  // =========================================================
   useEffect(() => {
-    if (!AuthAPI.isAuthenticated()) {
-      return;
-    }
-
-    const rol = localStorage.getItem('userRole') || '';
-
-    redirigirSegunRol(rol);
+    const actual = AuthAPI.getUsuarioActual();
+    if (actual) router.replace(rutaInicial(actual.rol));
   }, [router]);
 
-  // =========================================================
-  // LOGIN
-  // =========================================================
-  const handleLogin = async (e) => {
+  const ingresar = async (e) => {
     e.preventDefault();
-
-    if (!username.trim() || !password.trim()) {
-      addToast(
-        'Ingresa usuario y contraseña',
-        'error'
-      );
+    if (!username.trim() || !password) {
+      addToast('Ingresa usuario y contraseña', 'error');
       return;
     }
-
-    setLoading(true);
-
+    setCargando(true);
     try {
-      const user = await AuthAPI.login(
-        username.trim(),
-        password.trim()
-      );
-
-      const rolActual =
-        user.rol ||
-        user.role ||
-        '';
-
-      const nombreUsuario =
-        user.nombreCompleto ||
-        user.username ||
-        username.trim();
-
-      // Guardar información de sesión local
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'userRole',
-          rolActual
-        );
-
-        localStorage.setItem(
-          'userName',
-          nombreUsuario
-        );
+      const user = await AuthAPI.login(username.trim(), password);
+      try {
+        localStorage.setItem('userRole', user.rol || '');
+        localStorage.setItem('userName', user.nombreCompleto || user.username || '');
+      } catch (err) {
+        // sin almacenamiento: la sesión principal ya quedó guardada
       }
-
-      addToast(
-        `Bienvenido/a ${nombreUsuario}`,
-        'success'
-      );
-
-      // Redirigir según el rol
-      redirigirSegunRol(rolActual);
-
+      addToast(`Bienvenido/a ${user.nombreCompleto || user.username}`, 'success');
+      router.push(rutaInicial(user.rol));
     } catch (err) {
-      addToast(
-        err.message ||
-          'Credenciales incorrectas',
-        'error'
-      );
+      addToast(err.message || 'Credenciales incorrectas', 'error');
     } finally {
-      setLoading(false);
+      setCargando(false);
     }
   };
 
-  // =========================================================
-  // REGISTRO
-  // =========================================================
-  const handleRegister = async (e) => {
-    e.preventDefault();
-
-    if (
-      !regNombre.trim() ||
-      !regUsername.trim() ||
-      !regPassword.trim()
-    ) {
-      addToast(
-        'Por favor completa los campos obligatorios',
-        'error'
-      );
-      return;
-    }
-
-    if (
-      regPassword !==
-      regPasswordConfirm
-    ) {
-      addToast(
-        'Las contraseñas no coinciden',
-        'error'
-      );
-      return;
-    }
-
-    if (regPassword.length < 6) {
-      addToast(
-        'La contraseña debe tener al menos 6 caracteres',
-        'warning'
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Crear cuenta
-      await AuthAPI.register({
-        nombreCompleto:
-          regNombre.trim(),
-
-        username:
-          regUsername
-            .trim()
-            .toLowerCase(),
-
-        email:
-          regEmail.trim() || null,
-
-        telefono:
-          regTelefono.trim() || null,
-
-        password:
-          regPassword,
-
-        // El servidor asigna el rol RECEPCIONISTA y deja la cuenta inactiva.
-        turno: 'General'
-      });
-
-      // La cuenta queda pendiente: un administrador debe activarla
-      addToast(
-        'Cuenta creada. Un administrador debe activarla antes de su primer ingreso.',
-        'success'
-      );
-
-      setUsername(regUsername.trim().toLowerCase());
-      setPassword('');
-      setIsRegister(false);
-
-    } catch (err) {
-      addToast(
-        err.message ||
-          'Error al registrar la cuenta',
-        'error'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // =========================================================
-  // INTERFAZ
-  // =========================================================
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 font-sans text-slate-800">
-
-      {/* Tarjeta de autenticación */}
-      <div className="w-full max-w-sm bg-white p-6 sm:p-8 rounded-xl border border-slate-300 shadow-sm space-y-5">
-
-        {/* Encabezado */}
-        <div className="text-center space-y-1">
-
-          <h1 className="text-xl font-bold text-slate-900">
-            Hotel Princes Ica
-          </h1>
-
-          <p className="text-xs text-slate-500">
-            {isRegister
-              ? 'Registro de Nueva Cuenta'
-              : 'Acceso al Sistema'}
-          </p>
-
+    <div className="min-h-screen grid lg:grid-cols-2 bg-slate-950 font-sans">
+      <section className="hidden lg:flex flex-col justify-between p-10 text-white relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-25"
+          style={{ backgroundImage: "url('/portada.jpg'), url('/portada-huacachina.svg')" }}
+        />
+        <div className="relative flex items-center gap-3">
+          <span className="p-2.5 bg-amber-400 rounded-xl text-slate-900"><Hotel className="w-6 h-6" /></span>
+          <div>
+            <p className="font-bold text-lg leading-tight">Hotel Princes Ica</p>
+            <p className="text-xs text-amber-300 uppercase tracking-[0.2em]">Panel del personal</p>
+          </div>
         </div>
-
-        {/* Selector Login / Registro */}
-        <div className="flex border border-slate-200 rounded-lg p-1 bg-slate-50 text-xs font-semibold">
-
-          <button
-            type="button"
-            onClick={() =>
-              setIsRegister(false)
-            }
-            className={`flex-1 py-1.5 rounded-md transition ${
-              !isRegister
-                ? 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Iniciar Sesión
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              setIsRegister(true)
-            }
-            className={`flex-1 py-1.5 rounded-md transition ${
-              isRegister
-                ? 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Registrarse
-          </button>
-
+        <div className="relative space-y-3 max-w-md">
+          <h1 className="text-4xl font-black leading-tight">Recepción, limpieza y gestión en un solo lugar</h1>
+          <p className="text-slate-300 text-sm">Cada rol ve solo los módulos que le corresponden. Si aún no tienes usuario, pídeselo al administrador del hotel.</p>
         </div>
+        <p className="relative text-xs text-slate-500">Acceso restringido al personal autorizado.</p>
+      </section>
 
-        {/* =====================================================
-            FORMULARIO LOGIN
-        ===================================================== */}
-        {!isRegister ? (
+      <section className="flex items-center justify-center p-6 bg-slate-100 lg:rounded-l-[2rem]">
+        <form onSubmit={ingresar} className="w-full max-w-sm space-y-5">
+          <div className="lg:hidden flex items-center gap-2 text-slate-900">
+            <span className="p-2 bg-amber-400 rounded-xl"><Hotel className="w-5 h-5" /></span>
+            <span className="font-bold">Hotel Princes Ica</span>
+          </div>
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
+              <ShieldCheck className="w-3.5 h-3.5" /> Personal del hotel
+            </span>
+            <h2 className="mt-3 text-3xl font-black text-slate-900">Iniciar sesión</h2>
+            <p className="text-sm text-slate-500 mt-1">Usa el usuario que te entregó el administrador.</p>
+          </div>
 
-          <form
-            onSubmit={handleLogin}
-            className="space-y-4 text-xs"
-          >
-
-            <div>
-
-              <label className="block font-semibold text-slate-700 mb-1">
-                Usuario
-              </label>
-
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Usuario</span>
+            <div className="mt-1 relative">
+              <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
               <input
-                type="text"
-                required
-                autoFocus
                 value={username}
-                onChange={(e) =>
-                  setUsername(e.target.value)
-                }
-                placeholder="Ingresa tu usuario"
-                className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                autoFocus
+                className="w-full pl-9 pr-3 py-3 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                placeholder="Ej: pluna"
               />
-
             </div>
-
-            <div>
-
-              <label className="block font-semibold text-slate-700 mb-1">
-                Contraseña
-              </label>
-
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Contraseña</span>
+            <div className="mt-1 relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
               <input
                 type="password"
-                required
                 value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                placeholder="Ingresa tu contraseña"
-                className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                className="w-full pl-9 pr-3 py-3 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                placeholder="••••••••"
               />
-
             </div>
+          </label>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg transition disabled:opacity-50"
-            >
-              {loading
-                ? 'Ingresando...'
-                : 'Iniciar Sesión'}
-            </button>
-
-          </form>
-
-        ) : (
-
-          /* ===================================================
-             FORMULARIO REGISTRO
-          =================================================== */
-
-          <form
-            onSubmit={handleRegister}
-            className="space-y-3 text-xs"
+          <button
+            type="submit"
+            disabled={cargando}
+            className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
           >
+            <KeyRound className="w-4 h-4 text-amber-400" /> {cargando ? 'Verificando…' : 'Ingresar al panel'}
+          </button>
 
-            <div>
-
-              <label className="block font-semibold text-slate-700 mb-1">
-                Nombre Completo *
-              </label>
-
-              <input
-                type="text"
-                required
-                value={regNombre}
-                onChange={(e) =>
-                  setRegNombre(e.target.value)
-                }
-                placeholder="Ej: Juan Pérez"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
-              />
-
-            </div>
-
-            <div>
-
-              <label className="block font-semibold text-slate-700 mb-1">
-                Nombre de Usuario *
-              </label>
-
-              <input
-                type="text"
-                required
-                value={regUsername}
-                onChange={(e) =>
-                  setRegUsername(e.target.value)
-                }
-                placeholder="Ej: jperez"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
-              />
-
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-
-              <div>
-
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Correo
-                </label>
-
-                <input
-                  type="email"
-                  value={regEmail}
-                  onChange={(e) =>
-                    setRegEmail(e.target.value)
-                  }
-                  placeholder="correo@ejemplo.com"
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
-                />
-
-              </div>
-
-              <div>
-
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Teléfono
-                </label>
-
-                <input
-                  type="tel"
-                  value={regTelefono}
-                  onChange={(e) =>
-                    setRegTelefono(e.target.value)
-                  }
-                  placeholder="987654321"
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
-                />
-
-              </div>
-
-            </div>
-
-            <div>
-
-              <label className="block font-semibold text-slate-700 mb-1">
-                Contraseña *
-              </label>
-
-              <input
-                type="password"
-                required
-                value={regPassword}
-                onChange={(e) =>
-                  setRegPassword(e.target.value)
-                }
-                placeholder="Mínimo 4 caracteres"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
-              />
-
-            </div>
-
-            <div>
-
-              <label className="block font-semibold text-slate-700 mb-1">
-                Confirmar Contraseña *
-              </label>
-
-              <input
-                type="password"
-                required
-                value={regPasswordConfirm}
-                onChange={(e) =>
-                  setRegPasswordConfirm(
-                    e.target.value
-                  )
-                }
-                placeholder="Repite la contraseña"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-amber-500"
-              />
-
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg transition disabled:opacity-50 mt-1"
-            >
-              {loading
-                ? 'Creando cuenta...'
-                : 'Crear Cuenta'}
-            </button>
-
-          </form>
-        )}
-
-        {/* Volver a página principal */}
-        <div className="text-center pt-3 border-t border-slate-200">
-
-          <Link
-            href="/"
-            className="text-xs text-amber-600 hover:underline"
-          >
-            ← Volver a la página principal
-          </Link>
-
-        </div>
-
-      </div>
+          <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
+            <p>¿Olvidaste tu contraseña? El administrador puede restablecerla desde el módulo Usuarios.</p>
+            <p>
+              ¿Eres huésped?{' '}
+              <Link href="/cuenta" className="font-semibold text-amber-700 hover:underline">Ingresa a tu cuenta de cliente</Link>
+            </p>
+            <Link href="/" className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-slate-900">
+              <ArrowLeft className="w-3.5 h-3.5" /> Volver a la web del hotel
+            </Link>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Phone, Mail, Globe, MapPin, CreditCard } from 'lucide-react';
 import { useToast } from './Toast';
+import * as V from '../../lib/validaciones';
 
 export default function ModalHuesped({ isOpen, onClose, onSave, huesped = null }) {
   const { addToast } = useToast();
@@ -57,6 +58,11 @@ export default function ModalHuesped({ isOpen, onClose, onSave, huesped = null }
         ciudadProcedencia
       };
 
+      // Mismas reglas que el servidor: se avisa antes de enviar
+      const errores = V.huesped(payload);
+      if (Object.keys(errores).length > 0) {
+        throw new Error(Object.values(errores).join('. '));
+      }
       await onSave(payload, huesped?.id);
       addToast(`Huésped ${nombres} ${apellidos} guardado correctamente`, 'success');
       onClose();

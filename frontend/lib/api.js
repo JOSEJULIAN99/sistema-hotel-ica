@@ -658,14 +658,6 @@ export const ReservacionAPI = {
     }
   },
 
-  // Reserva desde la web pública (sin sesión): el servidor registra o reutiliza al huésped
-  async createPublica(data) {
-    return await request('/publico/reservas', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
   async confirmar(id) {
     try {
       return await request(`/reservaciones/${id}/confirmar`, { method: 'PATCH' });
@@ -844,6 +836,23 @@ export const UsuarioAPI = {
       if (rol) list = list.filter(u => u.rol === rol);
       return list;
     }
+  },
+
+  // Alta de personal (solo administrador)
+  async create(datos) {
+    return await request('/usuarios', { method: 'POST', body: JSON.stringify(datos) });
+  },
+
+  async update(id, datos) {
+    return await request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
+  },
+
+  async cambiarActivo(id, activo) {
+    return await request(`/usuarios/${id}/activo?valor=${activo ? 'true' : 'false'}`, { method: 'PATCH' });
+  },
+
+  async restablecerPassword(id, password) {
+    return await request(`/usuarios/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password }) });
   }
 };
 // ==================== ASISTENTE IA ====================
@@ -889,6 +898,11 @@ export const ConfiguracionAPI = {
 export const PublicoAPI = {
   async hotel() {
     return await request('/publico/hotel');
+  },
+  // Habitaciones libres para unas fechas y número de personas (con el total de la estadía)
+  async disponibilidad(entrada, salida, personas) {
+    const q = new URLSearchParams({ entrada, salida, personas: String(personas || 1) }).toString();
+    return await request(`/publico/disponibilidad?${q}`);
   },
   // mensajes: [{ rol: 'usuario' | 'asistente', contenido }]
   async chat(mensajes) {
@@ -1003,7 +1017,7 @@ export const MercadoPagoAPI = {
       body: JSON.stringify(monto ? { monto: Number(monto) } : {})
     });
   },
-  // Prepago de una reserva desde la web pública
+  // Prepago de una reserva (los clientes usan ClienteAPI.pagar en lib/cliente.js)
   async pagarReserva(codigoReserva) {
     return await request(`/publico/reservas/${encodeURIComponent(codigoReserva)}/pagar`, { method: 'POST' });
   },
