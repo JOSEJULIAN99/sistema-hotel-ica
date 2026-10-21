@@ -46,10 +46,11 @@ export default function LimpiezaPage() {
         setUsuarioActual(user);
         setIsLimpiezaRole(user.rol === 'LIMPIEZA');
       }
+      // La lista de personal es opcional: el rol LIMPIEZA no tiene permiso para verla
       const [t, h, u] = await Promise.all([
         LimpiezaAPI.getAll(),
         HabitacionAPI.getAll(),
-        UsuarioAPI.getAll()
+        user?.rol === 'LIMPIEZA' ? Promise.resolve([]) : UsuarioAPI.getAll().catch(() => [])
       ]);
       setTareas(t || []);
       setHabitaciones(h || []);

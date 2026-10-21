@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, User, ShieldCheck, CalendarCheck2, CreditCard, ArrowRight } from 'lucide-react';
+import { Lock, Mail, User, ShieldCheck, CalendarCheck2, CreditCard, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { ClienteAPI } from '../../lib/cliente';
 import * as V from '../../lib/validaciones';
 import { useToast } from '../components/Toast';
@@ -36,6 +36,8 @@ export default function CuentaPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
+  const [verConfirmarPassword, setVerConfirmarPassword] = useState(false);
   const [registro, setRegistro] = useState(REGISTRO_VACIO);
   const [errores, setErrores] = useState({});
 
@@ -165,8 +167,20 @@ export default function CuentaPage() {
               <span className="text-sm font-semibold text-slate-700">Contraseña</span>
               <div className="mt-1 relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  className={`${campo} border-slate-300 pl-9`} placeholder="••••••••" />
+                <input
+                  type={verPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`${campo} border-slate-300 pl-9 pr-10`}
+                  placeholder="••••••••" />
+                <button
+                  type="button"
+                  onClick={() => setVerPassword(!verPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                >
+                  {verPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
               </div>
             </label>
             <button type="submit" disabled={cargando}
@@ -222,7 +236,7 @@ export default function CuentaPage() {
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Celular</span>
                 <input type="tel" value={registro.telefono} onChange={cambiar('telefono')} onBlur={revisar('telefono')} autoComplete="tel"
-                  className={`mt-1 ${campo} ${borde('telefono')}`} placeholder="987654321" />
+                  className={`mt-1 ${campo} ${borde('telefono')}`} placeholder="999888777" />
                 <ErrorCampo nombre="telefono" />
               </label>
               <label className="block">
@@ -237,14 +251,34 @@ export default function CuentaPage() {
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Contraseña *</span>
-                <input type="password" value={registro.password} onChange={cambiar('password')} onBlur={revisar('password')} autoComplete="new-password"
-                  className={`mt-1 ${campo} ${borde('password')}`} placeholder="Letras y números, mínimo 8" />
+                <div className="mt-1 relative">
+                  <input type={verPassword ? 'text' : 'password'} value={registro.password} onChange={cambiar('password')} onBlur={revisar('password')} autoComplete="new-password"
+                    className={`${campo} ${borde('password')} pr-10`} placeholder="Letras y números, mínimo 8" />
+                  <button
+                    type="button"
+                    onClick={() => setVerPassword(!verPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {verPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <ErrorCampo nombre="password" />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Repetir contraseña *</span>
-                <input type="password" value={registro.confirmar} onChange={cambiar('confirmar')} onBlur={revisar('confirmar')} autoComplete="new-password"
-                  className={`mt-1 ${campo} ${borde('confirmar')}`} />
+                <div className="mt-1 relative">
+                  <input type={verConfirmarPassword ? 'text' : 'password'} value={registro.confirmar} onChange={cambiar('confirmar')} onBlur={revisar('confirmar')} autoComplete="new-password"
+                    className={`${campo} ${borde('confirmar')} pr-10`} />
+                  <button
+                    type="button"
+                    onClick={() => setVerConfirmarPassword(!verConfirmarPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={verConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {verConfirmarPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <ErrorCampo nombre="confirmar" />
               </label>
             </div>
