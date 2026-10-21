@@ -15,6 +15,8 @@ export default function ModalHabitacion({ isOpen, onClose, onSave, habitacion = 
   const [descripcion, setDescripcion] = useState('');
   const [caracteristicas, setCaracteristicas] = useState('');
   const [imagenUrl, setImagenUrl] = useState('');
+  const [archivo, setArchivo] = useState(null);
+  const [vistaPrevia, setVistaPrevia] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -39,9 +41,33 @@ export default function ModalHabitacion({ isOpen, onClose, onSave, habitacion = 
       setCaracteristicas('WiFi 5G, Smart TV 55", A/C, Frigobar, Ducha Caliente');
       setImagenUrl('https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80');
     }
+    setArchivo(null);
+    setVistaPrevia('');
   }, [habitacion, isOpen]);
 
+  // Libera la vista previa local al cambiar de archivo o cerrar
+  useEffect(() => {
+    return () => {
+      if (vistaPrevia) URL.revokeObjectURL(vistaPrevia);
+    };
+  }, [vistaPrevia]);
+
   if (!isOpen) return null;
+
+  const seleccionarArchivo = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) {
+      addToast('Formato no permitido. Use JPG, PNG o WEBP', 'error');
+      return;
+    }
+    if (f.size > 3 * 1024 * 1024) {
+      addToast('La imagen supera los 3 MB', 'error');
+      return;
+    }
+    setArchivo(f);
+    setVistaPrevia(URL.createObjectURL(f));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,7 +87,7 @@ export default function ModalHabitacion({ isOpen, onClose, onSave, habitacion = 
         imagenUrl
       };
 
-      await onSave(payload, habitacion?.id);
+      await onSave(payload, habitacion?.id, archivo);
       addToast(`Habitación ${numero} ${habitacion ? 'actualizada' : 'creada'} con éxito`, 'success');
       onClose();
     } catch (err) {
@@ -197,8 +223,27 @@ export default function ModalHabitacion({ isOpen, onClose, onSave, habitacion = 
             />
           </div>
 
+          <div className="space-y-2">
+            <label className="block font-semibold text-slate-700">Foto de la habitación</label>
+            <div className="flex items-center gap-3">
+              <div className="w-24 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                {vistaPrevia || imagenUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={vistaPrevia || imagenUrl} alt="Vista previa" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="w-5 h-5 text-slate-400" />
+                )}
+              </div>
+              <label className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold cursor-pointer hover:bg-slate-50">
+                Subir imagen
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={seleccionarArchivo} className="hidden" />
+              </label>
+              <span className="text-[11px] text-slate-500">{archivo ? archivo.name : 'JPG, PNG o WEBP · máx. 3 MB'}</span>
+            </div>
+          </div>
+
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">URL de Imagen Fotográfica</label>
+            <label className="block font-semibold text-slate-700 mb-1">O URL de imagen externa</label>
             <input
               type="url"
               value={imagenUrl}

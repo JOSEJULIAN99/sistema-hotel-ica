@@ -20,4 +20,6 @@ public interface HabitacionService {
     HabitacionDTO actualizar(Long id, HabitacionRequestDTO dto);
     HabitacionDTO cambiarEstado(Long id, EstadoHabitacion nuevoEstado);
     void eliminar(Long id);
+    HabitacionDTO subirImagen(Long id, org.springframework.web.multipart.MultipartFile archivo);
+    HabitacionDTO eliminarImagen(Long id);
 }

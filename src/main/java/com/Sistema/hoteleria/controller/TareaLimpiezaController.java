@@ -15,7 +15,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/limpieza")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class TareaLimpiezaController {
 
     private final TareaLimpiezaService tareaLimpiezaService;

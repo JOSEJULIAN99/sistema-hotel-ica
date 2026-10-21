@@ -20,11 +20,42 @@ import {
   Sparkles,
   Package,
   CreditCard,
-  FileText
+  FileText,
+  Bot,
+  Settings,
+  TrendingUp,
+  Wrench,
+  Activity,
+  UserCheck
 } from 'lucide-react';
 
 import { ToastProvider } from '../components/Toast';
+import CampanaAvisos from '../components/CampanaAvisos';
 import { AuthAPI } from '../../lib/auth';
+
+// Rutas del panel y roles que pueden abrirlas (además de ocultarlas en el menú).
+// El backend vuelve a validar cada petición; esto evita pantallas vacías por URL directa.
+const ACCESO_POR_RUTA = [
+  { prefijo: '/VistaPersonal/recepcion', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/reservaciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/huespedes', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/almacen', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/transacciones', roles: ['ADMINISTRADOR', 'ADMIN', 'RECEPCIONISTA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/reportes', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/Limpieza', roles: ['ADMINISTRADOR', 'ADMIN', 'LIMPIEZA', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/configuracion', roles: ['ADMINISTRADOR', 'ADMIN'] },
+  { prefijo: '/VistaPersonal/tarifas', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/monitoreo', roles: ['ADMINISTRADOR', 'ADMIN', 'GERENTE'] },
+  { prefijo: '/VistaPersonal/usuarios', roles: ['ADMINISTRADOR', 'ADMIN'] }
+];
+
+function rutaPermitida(pathname, rol) {
+  if (pathname === '/VistaPersonal' || pathname === '/VistaPersonal/') {
+    return rol !== 'LIMPIEZA';
+  }
+  const regla = ACCESO_POR_RUTA.find(r => pathname.startsWith(r.prefijo));
+  return !regla || regla.roles.includes(rol);
+}
 
 export default function PersonalLayout({ children }) {
   const pathname = usePathname();
@@ -74,6 +105,17 @@ function PersonalLayoutContent({
     if (!activeUser) {
       router.replace(
         '/VistaPersonal/login'
+      );
+    } else if (String(activeUser.rol || '').toUpperCase() === 'CLIENTE') {
+      // Una cuenta de cliente nunca entra al panel del personal
+      AuthAPI.logout();
+      router.replace('/cuenta');
+    } else if (!rutaPermitida(pathname, String(activeUser.rol || '').toUpperCase())) {
+      // Rol sin acceso a esta pantalla: enviarlo a su vista principal
+      router.replace(
+        String(activeUser.rol || '').toUpperCase() === 'LIMPIEZA'
+          ? '/VistaPersonal/Limpieza'
+          : '/VistaPersonal'
       );
     } else {
       setUsuario(activeUser);
@@ -227,6 +269,23 @@ function PersonalLayoutContent({
     },
 
     // ----------------------------------------------------------
+    // INCIDENCIAS DE MANTENIMIENTO
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/incidencias',
+      label: 'Incidencias',
+      icon: Wrench,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'RECEPCIONISTA',
+        'LIMPIEZA',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
     // ALMACÉN
     // ----------------------------------------------------------
 
@@ -259,6 +318,67 @@ function PersonalLayoutContent({
     },
 
     // ----------------------------------------------------------
+    // ASISTENTE IA
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/asistente',
+      label: 'Asistente IA',
+      icon: Bot,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'RECEPCIONISTA',
+        'GERENTE',
+        'LIMPIEZA'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // MONITOREO DEL SISTEMA
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/monitoreo',
+      label: 'Monitoreo',
+      icon: Activity,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // TARIFAS DINÁMICAS
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/tarifas',
+      label: 'Tarifas dinámicas',
+      icon: TrendingUp,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN',
+        'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // CONFIGURACIÓN DE LA IA (base de conocimiento)
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/configuracion',
+      label: 'Configuración IA',
+      icon: Settings,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN'
+      ]
+    },
+
+    // ----------------------------------------------------------
     // REPORTES
     // ----------------------------------------------------------
 
@@ -270,6 +390,20 @@ function PersonalLayoutContent({
         'ADMINISTRADOR',
         'ADMIN',
         'GERENTE'
+      ]
+    },
+
+    // ----------------------------------------------------------
+    // USUARIOS DEL PERSONAL (alta, roles, activación y contraseñas)
+    // ----------------------------------------------------------
+
+    {
+      href: '/VistaPersonal/usuarios',
+      label: 'Usuarios',
+      icon: UserCheck,
+      roles: [
+        'ADMINISTRADOR',
+        'ADMIN'
       ]
     }
 
@@ -670,6 +804,9 @@ function PersonalLayoutContent({
         {children}
 
       </main>
+
+      {/* Avisos instantáneos en tiempo real */}
+      <CampanaAvisos rol={rolActual} />
 
     </div>
   );

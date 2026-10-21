@@ -150,6 +150,8 @@ CREATE TABLE tareas_limpieza (
 -- ==========================================================
 
 -- 1. Usuarios del Sistema
+-- Nota: estas contraseñas iniciales se migran automáticamente a BCrypt en el primer
+-- inicio de sesión (UsuarioServiceImpl.passwordValida). Cámbielas tras instalar.
 INSERT INTO usuarios (id, username, password, nombre_completo, email, telefono, rol, turno, activo, created_at) VALUES
 (1, 'admin', 'admin123', 'Administrador General', 'admin@hotelprincesica.com', '999888777', 'ADMINISTRADOR', 'General', TRUE, NOW()),
 (2, 'pluna', 'hotel123', 'Pablo Luna', 'pluna@hotelprincesica.com', '956123456', 'RECEPCIONISTA', 'Turno Tarde', TRUE, NOW()),
@@ -193,6 +195,9 @@ INSERT INTO pagos (id, estadia_id, monto, metodo_pago, fecha_pago, nro_operacion
 -- 8. Tarea de Limpieza (Habitación 103 pendiente para Rosa)
 INSERT INTO tareas_limpieza (id, habitacion_id, empleado_id, tipo_limpieza, estado, prioridad, observaciones, fecha_creacion, fecha_inicio, fecha_fin) VALUES
 (1, 3, 4, 'CHECKOUT', 'PENDIENTE', 'ALTA', 'Check-out realizado hoy. Requiere cambio de sábanas y desinfección completa.', NOW() - INTERVAL '2 hour', NULL, NULL);
+
+-- Cuentas de clientes: cada cuenta CLIENTE apunta a su ficha de huésped
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS huesped_id BIGINT UNIQUE REFERENCES huespedes(id);
 
 -- Ajustar secuencias automáticas de IDs en PostgreSQL
 SELECT setval(pg_get_serial_sequence('usuarios', 'id'), COALESCE(MAX(id), 1)) FROM usuarios;

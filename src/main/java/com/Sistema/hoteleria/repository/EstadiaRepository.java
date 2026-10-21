@@ -27,4 +27,8 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
     List<Estadia> findCheckOutsProgramadosHoy(@Param("fecha") LocalDate fecha);
 
     long countByEstado(EstadoEstadia estado);
+
+    boolean existsByHabitacionId(Long habitacionId);
+
+    boolean existsByHuespedId(Long huespedId);
 }

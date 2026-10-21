@@ -1,6 +1,7 @@
 package com.Sistema.hoteleria.model.entity;
 
 import com.Sistema.hoteleria.model.enums.RolUsuario;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
@@ -43,6 +45,12 @@ public class Usuario {
     @Builder.Default
     @Column(nullable = false)
     private Boolean activo = true;
+
+    /** Solo para cuentas CLIENTE: ficha de huésped con sus datos y reservas. */
+    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "huesped_id", unique = true)
+    private Huesped huesped;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -59,11 +59,13 @@ export default function HabitacionesPage() {
     }
   };
 
-  const handleGuardarHabitacion = async (payload, id) => {
-    if (id) {
-      await HabitacionAPI.update(id, payload);
-    } else {
-      await HabitacionAPI.create(payload);
+  const handleGuardarHabitacion = async (payload, id, archivo) => {
+    const guardada = id
+      ? await HabitacionAPI.update(id, payload)
+      : await HabitacionAPI.create(payload);
+    // La foto se sube después de guardar los datos, porque necesita el id de la habitación
+    if (archivo) {
+      await HabitacionAPI.subirImagen(id || guardada.id, archivo);
     }
     loadHabitaciones();
   };

@@ -17,7 +17,8 @@ import {
   Search
 } from 'lucide-react';
 import { useToast } from './Toast';
-import { HuespedAPI } from '../../lib/api';
+import { HuespedAPI, cotizarEstancia } from '../../lib/api';
+import * as V from '../../lib/validaciones';
 
 export default function ModalReserva({
   isOpen,
@@ -25,7 +26,9 @@ export default function ModalReserva({
   onSave,
   habitacionPreseleccionada = null,
   habitaciones = [],
-  huespedes = []
+  huespedes = [],
+  // En la web pública no hay sesión: el huésped se envía junto con la reserva
+  modoPublico = false
 }) {
   const { addToast } = useToast();
 
@@ -72,12 +75,26 @@ export default function ModalReserva({
     }
   }, [isOpen, habitacionPreseleccionada, habitaciones]);
 
+  // Precio real del servidor: incluye las tarifas de temporada aprobadas (feriados, festividades)
+  const [cotizacion, setCotizacion] = useState(null);
+  useEffect(() => {
+    let vigente = true;
+    setCotizacion(null);
+    if (isOpen && habitacionId && fechaEntrada && fechaSalida && fechaSalida > fechaEntrada) {
+      cotizarEstancia(habitacionId, fechaEntrada, fechaSalida)
+        .then(c => { if (vigente) setCotizacion(c); })
+        .catch(() => { /* sin cotización: se muestra el cálculo base */ });
+    }
+    return () => { vigente = false; };
+  }, [isOpen, habitacionId, fechaEntrada, fechaSalida]);
+
   if (!isOpen) return null;
 
   const habSeleccionada = habitaciones.find(h => String(h.id) === String(habitacionId)) || habitacionPreseleccionada;
   const diffDays = Math.max(1, Math.ceil((new Date(fechaSalida) - new Date(fechaEntrada)) / (1000 * 60 * 60 * 24)));
   const precioNoche = habSeleccionada ? Number(habSeleccionada.precioPorNoche) : 120;
-  const precioSugerido = precioNoche * diffDays;
+  const ajusteTemporada = cotizacion ? Number(cotizacion.ajusteTemporada || 0) : 0;
+  const precioSugerido = cotizacion ? Number(cotizacion.total) : precioNoche * diffDays;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,10 +107,37 @@ export default function ModalReserva({
     try {
       let finalHuespedId = huespedIdExistente;
 
+      if (modoPublico) {
+        if (!nombres.trim() || !apellidos.trim() || !numeroDocumento.trim()) {
+          throw new Error('Por favor ingresa Nombres, Apellidos y Número de Documento del Huésped');
+        }
+        await onSave({
+          nombres: nombres.trim(),
+          apellidos: apellidos.trim(),
+          tipoDocumento,
+          numeroDocumento: numeroDocumento.trim(),
+          telefono: telefono.trim() || null,
+          email: email.trim() || null,
+          ciudadProcedencia: ciudadProcedencia.trim() || null,
+          habitacionId: Number(habitacionId),
+          fechaEntrada,
+          fechaSalida,
+          numeroPersonas: Number(numeroPersonas),
+          observaciones: observaciones.trim()
+        });
+        onClose();
+        return;
+      }
+
       // Si ingresa datos de nuevo huésped, registrarlo primero
       if (modoHuesped === 'NUEVO') {
         if (!nombres.trim() || !apellidos.trim() || !numeroDocumento.trim()) {
           throw new Error('Por favor ingresa Nombres, Apellidos y Número de Documento del Huésped');
+        }
+
+        const erroresHuesped = V.huesped({ nombres, apellidos, tipoDocumento, numeroDocumento, telefono, email });
+        if (Object.keys(erroresHuesped).length > 0) {
+          throw new Error(Object.values(erroresHuesped).join('. '));
         }
 
         const nuevoHuesped = await HuespedAPI.create({
@@ -379,6 +423,11 @@ export default function ModalReserva({
               <span className="text-xs text-amber-700">
                 {diffDays} noche{diffDays > 1 ? 's' : ''} x S/ {precioNoche.toFixed(2)}
               </span>
+              {ajusteTemporada !== 0 && (
+                <span className="block text-[10px] text-amber-800 font-semibold">
+                  Incluye tarifa de temporada: {ajusteTemporada > 0 ? '+' : ''}S/ {ajusteTemporada.toFixed(2)}
+                </span>
+              )}
             </div>
             <div className="text-right">
               <span className="text-xl font-black text-amber-950 font-mono">

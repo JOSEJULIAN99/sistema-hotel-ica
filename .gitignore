@@ -1,0 +1,38 @@
+# Compilación Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# Variables de entorno: NUNCA subir credenciales (BD, JWT, Supabase, IA, Mercado Pago)
+.env
+.env.*
+**/.env
+**/.env.*
+*.env
+!.env.example
+!**/.env.example
+
+# Archivos subidos y datos locales
+uploads/
+supabase/.temp/
+*.pem
+*.key
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

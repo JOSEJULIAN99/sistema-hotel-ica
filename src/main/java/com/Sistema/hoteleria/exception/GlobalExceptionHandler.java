@@ -1,5 +1,7 @@
 package com.Sistema.hoteleria.exception;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -36,22 +39,67 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    /** Errores por campo de las reglas de negocio (ValidadorDatos): el formulario los muestra junto a cada campo. */
+    @ExceptionHandler(DatosInvalidosException.class)
+    public ResponseEntity<Map<String, Object>> handleDatosInvalidos(DatosInvalidosException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Error de validación de datos");
+        response.put("message", ex.getMessage());
+        response.put("errors", ex.getErrores());
+        response.put("timestamp", LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            fieldErrors.put(fieldName, errorMessage);
+            String fieldName = error instanceof FieldError fe ? fe.getField() : error.getObjectName();
+            fieldErrors.putIfAbsent(fieldName, error.getDefaultMessage());
         });
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
         response.put("status", HttpStatus.BAD_REQUEST.value());
         response.put("error", "Error de validación de datos");
+        response.put("message", String.join(". ", fieldErrors.values()));
         response.put("errors", fieldErrors);
         response.put("timestamp", LocalDateTime.now());
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<Map<String, Object>> handleTooMany(TooManyRequestsException ex) {
+        return simple(HttpStatus.TOO_MANY_REQUESTS, "Demasiadas solicitudes", ex.getMessage());
+    }
+
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> handleNoDisponible(ServicioNoDisponibleException ex) {
+        return simple(HttpStatus.SERVICE_UNAVAILABLE, "Servicio no disponible", ex.getMessage());
+    }
+
+    private ResponseEntity<Map<String, Object>> simple(HttpStatus status, String error, String mensaje) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("status", status.value());
+        response.put("error", error);
+        response.put("message", mensaje);
+        response.put("timestamp", LocalDateTime.now());
+        return new ResponseEntity<>(response, status);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(DataIntegrityViolationException ex) {
+        log.warn("Violación de integridad de datos: {}", ex.getMostSpecificCause().getMessage());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("status", HttpStatus.CONFLICT.value());
+        response.put("error", "Conflicto de datos");
+        response.put("message", "La operación entra en conflicto con datos existentes (registro duplicado o relacionado)");
+        response.put("timestamp", LocalDateTime.now());
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -67,11 +115,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
+        log.error("Error no controlado", ex);
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
         response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         response.put("error", "Error interno del servidor");
-        response.put("message", ex.getMessage());
+        response.put("message", "Ocurrió un error inesperado. Intente nuevamente o contacte al administrador.");
         response.put("timestamp", LocalDateTime.now());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }

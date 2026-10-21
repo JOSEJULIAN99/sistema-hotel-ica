@@ -11,6 +11,7 @@ import {
   BarChart3,
   ArrowLeft
 } from 'lucide-react';
+import { EstadiaAPI, HabitacionAPI } from '../../../lib/api';
 
 export default function ReportesPage() {
   const [loading, setLoading] = useState(true);
@@ -28,20 +29,29 @@ export default function ReportesPage() {
   });
 
   const [listaInsumos, setListaInsumos] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    // Ingresos y ocupación vienen del backend; el inventario de almacén aún es local (sin módulo en el servidor)
+    async function cargarReporte() {
       try {
-        const estadias = JSON.parse(localStorage.getItem('hotel_estadias')) || [];
-        const habitaciones = JSON.parse(localStorage.getItem('hotel_habitaciones')) || [];
-        const almacen = JSON.parse(localStorage.getItem('hotel_almacen')) || [];
+        const [estadias, habitaciones] = await Promise.all([
+          EstadiaAPI.getAll(),
+          HabitacionAPI.getAll()
+        ]);
+        let almacen = [];
+        try {
+          almacen = JSON.parse(localStorage.getItem('hotel_almacen')) || [];
+        } catch (e) {
+          almacen = [];
+        }
         setListaInsumos(almacen);
 
         let ingresosAcumulados = 0;
         let efectivoAcumulado = 0;
         let digitalAcumulado = 0;
 
-        estadias.forEach(est => {
+        (estadias || []).forEach(est => {
           (est.pagos || []).forEach(p => {
             const monto = Number(p.monto || 0);
             ingresosAcumulados += monto;
@@ -53,28 +63,31 @@ export default function ReportesPage() {
           });
         });
 
-        const totalHab = habitaciones.length;
-        const ocupadas = habitaciones.filter(h => (h.estado || '').toUpperCase() === 'OCUPADA').length;
+        const listaHab = habitaciones || [];
+        const totalHab = listaHab.length;
+        const ocupadas = listaHab.filter(h => (h.estado || '').toUpperCase() === 'OCUPADA').length;
         const pctOcupacion = totalHab > 0 ? Math.round((ocupadas / totalHab) * 100) : 0;
         const bajoStock = almacen.filter(i => i.stock <= i.stockMinimo).length;
 
         setStatsReporte({
-          totalIngresos: ingresosAcumulados > 0 ? ingresosAcumulados : 1550.00,
-          efectivoTotal: efectivoAcumulado > 0 ? efectivoAcumulado : 900.00,
-          digitalTotal: digitalAcumulado > 0 ? digitalAcumulado : 650.00,
-          totalHabitaciones: totalHab || 8,
-          habitacionesOcupadas: ocupadas || 2,
-          porcentajeOcupacion: pctOcupacion || 25,
-          totalInsumos: almacen.length || 7,
-          insumosBajoStock: bajoStock || 1,
-          totalCheckIns: estadias.length || 4
+          totalIngresos: ingresosAcumulados,
+          efectivoTotal: efectivoAcumulado,
+          digitalTotal: digitalAcumulado,
+          totalHabitaciones: totalHab,
+          habitacionesOcupadas: ocupadas,
+          porcentajeOcupacion: pctOcupacion,
+          totalInsumos: almacen.length,
+          insumosBajoStock: bajoStock,
+          totalCheckIns: (estadias || []).length
         });
       } catch (err) {
         console.error('Error calculando reportes', err);
+        setError(err.message || 'No se pudo cargar el reporte');
       } finally {
         setLoading(false);
       }
     }
+    cargarReporte();
   }, []);
 
   const handleImprimir = () => {
@@ -83,6 +96,10 @@ export default function ReportesPage() {
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500 text-xs">Cargando reporte consolidado...</div>;
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-rose-600 text-xs">{error}</div>;
   }
 
   return (

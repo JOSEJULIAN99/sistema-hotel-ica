@@ -1,6 +1,10 @@
 // API Client para el Sistema Hotel Princes Ica
-// Se conecta a Spring Boot backend en http://localhost:8080/api
-// Si el backend no está disponible o da error de conexión, utiliza el almacén de datos local reactivo con fallback
+// Se conecta al backend Spring Boot en NEXT_PUBLIC_API_URL (por defecto http://localhost:8080/api).
+//
+// Regla de errores:
+// - Si el servidor responde con error (400, 401, 403, 404, 500), el error se muestra al usuario tal cual.
+// - Los datos locales de demostración solo se usan si NEXT_PUBLIC_MODO_DEMO=true
+//   y el servidor no responde (caída de red o timeout). Nunca se simula un éxito.
 
 import {
   INITIAL_HABITACIONES,
@@ -12,6 +16,32 @@ import {
 } from './mockData';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const MODO_DEMO = process.env.NEXT_PUBLIC_MODO_DEMO === 'true';
+
+// Error con el código HTTP y el mensaje que envió el servidor
+export class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+// ¿Se puede usar el almacén local? Solo en modo demo y si el servidor no respondió.
+function puedeUsarDemo(err) {
+  return MODO_DEMO && !(err instanceof ApiError);
+}
+
+// Token JWT guardado al iniciar sesión (ver lib/auth.js)
+function getAuthHeader() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const token = localStorage.getItem('hotel_session_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (e) {
+    return {};
+  }
+}
 
 // Helper para sincronizar datos locales en navegador
 function getLocalStore(key, defaultVal) {
@@ -43,26 +73,57 @@ async function request(endpoint, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...getAuthHeader(),
       ...options.headers,
     },
   };
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 s
+  let res;
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
-    const res = await fetch(url, { ...config, signal: controller.signal });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.message || `Error HTTP: ${res.status}`);
-    }
-    const data = await res.json();
-    return data.data !== undefined ? data.data : data;
+    res = await fetch(url, { ...config, signal: controller.signal });
   } catch (err) {
-    console.warn(`[API Fallback] Backend no disponible en ${endpoint}, usando datos locales. Causa:`, err.message);
-    throw err;
+    clearTimeout(timeoutId);
+    // Caída de red, servidor apagado o timeout
+    const sinServidor = new Error('No se pudo conectar con el servidor. Verifique que el backend esté en ejecución.');
+    sinServidor.cause = err;
+    throw sinServidor;
   }
+  clearTimeout(timeoutId);
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    // Sesión vencida o inválida: volver al login
+    localStorage.removeItem('hotel_session_user');
+    localStorage.removeItem('hotel_session_token');
+    if (!window.location.pathname.endsWith('/login') && window.location.pathname.startsWith('/VistaPersonal')) {
+      window.location.href = '/VistaPersonal/login';
+    }
+  }
+
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}));
+    const detalle = errJson.errors ? Object.values(errJson.errors).join('. ') : null;
+    throw new ApiError(detalle || errJson.message || `Error HTTP: ${res.status}`, res.status);
+  }
+
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => null);
+  if (data === null) return null;
+  return data.data !== undefined ? data.data : data;
+}
+
+// Envío de archivos (multipart). No fija Content-Type: el navegador agrega el boundary.
+async function requestArchivo(endpoint, formData, method = 'POST') {
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, { method, body: formData, headers: { ...getAuthHeader() } });
+  } catch (err) {
+    throw new Error('No se pudo conectar con el servidor. Verifique que el backend esté en ejecución.');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.message || `Error HTTP: ${res.status}`, res.status);
+  return data.data !== undefined ? data.data : data;
 }
 
 // ==================== DASHBOARD ====================
@@ -70,7 +131,8 @@ export const DashboardAPI = {
   async getStats() {
     try {
       return await request('/dashboard');
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const estadias = getLocalStore('estadias', INITIAL_ESTADIAS);
       const reservaciones = getLocalStore('reservaciones', INITIAL_RESERVACIONES);
@@ -108,8 +170,8 @@ export const DashboardAPI = {
         estadiasActivas: actEstadias.length,
         reservacionesPendientes: resPendientes.length,
         tareasLimpiezaPendientes: tareasPendientes.length,
-        ingresosHoy: ingresosHoy > 0 ? ingresosHoy : 350.00,
-        ingresosMes: (ingresosHoy > 0 ? ingresosHoy : 350.00) * 12 + 1850.00
+        ingresosHoy,
+        ingresosMes: ingresosHoy
       };
     }
   }
@@ -121,7 +183,8 @@ export const HabitacionAPI = {
     try {
       const query = new URLSearchParams(params).toString();
       return await request(`/habitaciones${query ? '?' + query : ''}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       if (params.estado) list = list.filter(h => h.estado === params.estado);
       if (params.tipo) list = list.filter(h => h.tipo === params.tipo);
@@ -133,7 +196,8 @@ export const HabitacionAPI = {
   async getById(id) {
     try {
       return await request(`/habitaciones/${id}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       return list.find(h => String(h.id) === String(id));
     }
@@ -145,7 +209,8 @@ export const HabitacionAPI = {
         method: 'POST',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const nueva = {
         ...data,
@@ -167,7 +232,8 @@ export const HabitacionAPI = {
         method: 'PUT',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const index = list.findIndex(h => String(h.id) === String(id));
       if (index !== -1) {
@@ -179,12 +245,24 @@ export const HabitacionAPI = {
     }
   },
 
+  // Foto de la habitación: se guarda en Supabase Storage (o disco del servidor) y se ve en toda la web
+  async subirImagen(id, archivo) {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    return await requestArchivo(`/habitaciones/${id}/imagen`, formData);
+  },
+
+  async eliminarImagen(id) {
+    return await request(`/habitaciones/${id}/imagen`, { method: 'DELETE' });
+  },
+
   async updateEstado(id, nuevoEstado) {
     try {
       return await request(`/habitaciones/${id}/estado?estado=${nuevoEstado}`, {
         method: 'PATCH',
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const index = list.findIndex(h => String(h.id) === String(id));
       if (index !== -1) {
@@ -198,7 +276,8 @@ export const HabitacionAPI = {
   async delete(id) {
     try {
       return await request(`/habitaciones/${id}`, { method: 'DELETE' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       list = list.filter(h => String(h.id) !== String(id));
       setLocalStore('habitaciones', list);
@@ -212,7 +291,8 @@ export const HuespedAPI = {
   async getAll(search = '') {
     try {
       return await request(`/huespedes${search ? `?search=${encodeURIComponent(search)}` : ''}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('huespedes', INITIAL_HUESPEDES);
       if (search) {
         const q = search.toLowerCase();
@@ -232,7 +312,8 @@ export const HuespedAPI = {
         method: 'POST',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('huespedes', INITIAL_HUESPEDES);
       const nuevo = { ...data, id: Date.now() };
       list.push(nuevo);
@@ -247,7 +328,8 @@ export const HuespedAPI = {
         method: 'PUT',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('huespedes', INITIAL_HUESPEDES);
       const index = list.findIndex(h => String(h.id) === String(id));
       if (index !== -1) {
@@ -261,7 +343,8 @@ export const HuespedAPI = {
   async delete(id) {
     try {
       return await request(`/huespedes/${id}`, { method: 'DELETE' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('huespedes', INITIAL_HUESPEDES);
       list = list.filter(h => String(h.id) !== String(id));
       setLocalStore('huespedes', list);
@@ -275,7 +358,8 @@ export const EstadiaAPI = {
   async getAll(soloActivas = false) {
     try {
       return await request(`/estadias?soloActivas=${soloActivas}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('estadias', INITIAL_ESTADIAS);
       return soloActivas ? list.filter(e => e.estado === 'ACTIVA') : list;
     }
@@ -284,7 +368,8 @@ export const EstadiaAPI = {
   async getById(id) {
     try {
       return await request(`/estadias/${id}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('estadias', INITIAL_ESTADIAS);
       return list.find(e => String(e.id) === String(id));
     }
@@ -296,7 +381,8 @@ export const EstadiaAPI = {
         method: 'POST',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const estadias = getLocalStore('estadias', INITIAL_ESTADIAS);
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const huespedes = getLocalStore('huespedes', INITIAL_HUESPEDES);
@@ -373,7 +459,8 @@ export const EstadiaAPI = {
         method: 'POST',
         body: JSON.stringify(consumoData),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('estadias', INITIAL_ESTADIAS);
       const estadia = list.find(e => String(e.id) === String(estadiaId));
       if (estadia) {
@@ -409,7 +496,8 @@ export const EstadiaAPI = {
         method: 'POST',
         body: JSON.stringify(pagoData),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('estadias', INITIAL_ESTADIAS);
       const estadia = list.find(e => String(e.id) === String(estadiaId));
       if (estadia) {
@@ -443,7 +531,8 @@ export const EstadiaAPI = {
         method: 'POST',
         body: JSON.stringify(checkOutData),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const estadias = getLocalStore('estadias', INITIAL_ESTADIAS);
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const limpiezas = getLocalStore('limpieza', INITIAL_LIMPIEZA);
@@ -521,7 +610,8 @@ export const ReservacionAPI = {
     try {
       const query = new URLSearchParams(params).toString();
       return await request(`/reservaciones${query ? '?' + query : ''}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('reservaciones', INITIAL_RESERVACIONES);
       if (params.estado) list = list.filter(r => r.estado === params.estado);
       return list;
@@ -534,7 +624,8 @@ export const ReservacionAPI = {
         method: 'POST',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('reservaciones', INITIAL_RESERVACIONES);
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const huespedes = getLocalStore('huespedes', INITIAL_HUESPEDES);
@@ -570,7 +661,8 @@ export const ReservacionAPI = {
   async confirmar(id) {
     try {
       return await request(`/reservaciones/${id}/confirmar`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('reservaciones', INITIAL_RESERVACIONES);
       const r = list.find(res => String(res.id) === String(id));
       if (r) {
@@ -584,7 +676,8 @@ export const ReservacionAPI = {
   async cancelar(id, motivo = '') {
     try {
       return await request(`/reservaciones/${id}/cancelar?motivo=${encodeURIComponent(motivo)}`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('reservaciones', INITIAL_RESERVACIONES);
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const r = list.find(res => String(res.id) === String(id));
@@ -610,7 +703,8 @@ export const ReservacionAPI = {
   async delete(id) {
     try {
       return await request(`/reservaciones/${id}`, { method: 'DELETE' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('reservaciones', INITIAL_RESERVACIONES);
       list = list.filter(r => String(r.id) !== String(id));
       setLocalStore('reservaciones', list);
@@ -624,7 +718,8 @@ export const LimpiezaAPI = {
   async getAll(soloPendientes = false) {
     try {
       return await request(`/limpieza?soloPendientes=${soloPendientes}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('limpieza', INITIAL_LIMPIEZA);
       return soloPendientes ? list.filter(t => t.estado === 'PENDIENTE') : list;
     }
@@ -636,7 +731,8 @@ export const LimpiezaAPI = {
         method: 'POST',
         body: JSON.stringify(data),
       });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('limpieza', INITIAL_LIMPIEZA);
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const usuarios = getLocalStore('usuarios', INITIAL_USUARIOS);
@@ -671,7 +767,8 @@ export const LimpiezaAPI = {
   async asignarEmpleado(id, empleadoId) {
     try {
       return await request(`/limpieza/${id}/asignar?empleadoId=${empleadoId}`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('limpieza', INITIAL_LIMPIEZA);
       const usuarios = getLocalStore('usuarios', INITIAL_USUARIOS);
       const tarea = list.find(t => String(t.id) === String(id));
@@ -687,7 +784,8 @@ export const LimpiezaAPI = {
   async iniciar(id) {
     try {
       return await request(`/limpieza/${id}/iniciar`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('limpieza', INITIAL_LIMPIEZA);
       const tarea = list.find(t => String(t.id) === String(id));
       if (tarea) {
@@ -702,7 +800,8 @@ export const LimpiezaAPI = {
   async completar(id) {
     try {
       return await request(`/limpieza/${id}/completar`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       const list = getLocalStore('limpieza', INITIAL_LIMPIEZA);
       const habitaciones = getLocalStore('habitaciones', INITIAL_HABITACIONES);
       const tarea = list.find(t => String(t.id) === String(id));
@@ -731,10 +830,206 @@ export const UsuarioAPI = {
   async getAll(rol) {
     try {
       return await request(`/usuarios${rol ? `?rol=${rol}` : ''}`);
-    } catch {
+    } catch (err) {
+      if (!puedeUsarDemo(err)) throw err;
       let list = getLocalStore('usuarios', INITIAL_USUARIOS);
       if (rol) list = list.filter(u => u.rol === rol);
       return list;
     }
+  },
+
+  // Alta de personal (solo administrador)
+  async create(datos) {
+    return await request('/usuarios', { method: 'POST', body: JSON.stringify(datos) });
+  },
+
+  async update(id, datos) {
+    return await request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
+  },
+
+  async cambiarActivo(id, activo) {
+    return await request(`/usuarios/${id}/activo?valor=${activo ? 'true' : 'false'}`, { method: 'PATCH' });
+  },
+
+  async restablecerPassword(id, password) {
+    return await request(`/usuarios/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password }) });
+  }
+};
+// ==================== ASISTENTE IA ====================
+// Sugiere; nunca ejecuta operaciones. Sin modo demo: requiere el backend.
+export const AsistenteAPI = {
+  async estado() {
+    return await request('/asistente/estado');
+  },
+
+  async recomendar({ fechaEntrada, fechaSalida, numeroPersonas, presupuestoPorNoche, preferencias }) {
+    return await request('/asistente/recomendar', {
+      method: 'POST',
+      body: JSON.stringify({
+        fechaEntrada,
+        fechaSalida,
+        numeroPersonas: Number(numeroPersonas),
+        presupuestoPorNoche: presupuestoPorNoche ? Number(presupuestoPorNoche) : null,
+        preferencias: preferencias || null
+      }),
+    });
+  },
+
+  async resumenDiario() {
+    return await request('/asistente/resumen-diario');
+  },
+
+  async limpiezaPriorizada() {
+    return await request('/asistente/limpieza-priorizada');
+  }
+};
+
+// ==================== BASE DE CONOCIMIENTO DE LA IA (admin) ====================
+export const ConfiguracionAPI = {
+  async obtener() {
+    return await request('/configuracion');
+  },
+  async actualizar(datos) {
+    return await request('/configuracion', { method: 'PUT', body: JSON.stringify(datos) });
+  }
+};
+
+// ==================== WEB PÚBLICA: datos del hotel y chatbot 24/7 ====================
+export const PublicoAPI = {
+  async hotel() {
+    return await request('/publico/hotel');
+  },
+  // Habitaciones libres para unas fechas y número de personas (con el total de la estadía)
+  async disponibilidad(entrada, salida, personas) {
+    const q = new URLSearchParams({ entrada, salida, personas: String(personas || 1) }).toString();
+    return await request(`/publico/disponibilidad?${q}`);
+  },
+  // mensajes: [{ rol: 'usuario' | 'asistente', contenido }]
+  async chat(mensajes) {
+    return await request('/publico/chat', { method: 'POST', body: JSON.stringify({ mensajes }) });
+  }
+};
+
+// ==================== TRADUCCIÓN AUTOMÁTICA (recepción) ====================
+export const TraduccionAPI = {
+  async traducir(texto, idiomaDestino) {
+    return await request('/traduccion', { method: 'POST', body: JSON.stringify({ texto, idiomaDestino }) });
+  }
+};
+
+// ==================== TARIFAS DINÁMICAS (admin y gerencia) ====================
+export const TarifasAPI = {
+  async pendientes() {
+    return await request('/tarifas/recomendaciones');
+  },
+  async historial() {
+    return await request('/tarifas/historial');
+  },
+  async analizar(desde, hasta) {
+    const q = new URLSearchParams();
+    if (desde) q.set('desde', desde);
+    if (hasta) q.set('hasta', hasta);
+    const qs = q.toString();
+    return await request(`/tarifas/analizar${qs ? '?' + qs : ''}`, { method: 'POST' });
+  },
+  async decidir(id, aprobar, porcentaje, comentario) {
+    return await request(`/tarifas/recomendaciones/${id}/decidir`, {
+      method: 'PATCH',
+      body: JSON.stringify({ aprobar, porcentaje: porcentaje === '' || porcentaje == null ? null : Number(porcentaje), comentario: comentario || null })
+    });
+  },
+  async temporadas() {
+    return await request('/tarifas/temporadas');
+  },
+  async crearTemporada(datos) {
+    return await request('/tarifas/temporadas', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async desactivarTemporada(id) {
+    return await request(`/tarifas/temporadas/${id}/desactivar`, { method: 'PATCH' });
+  }
+};
+
+export const EventosAPI = {
+  async listar() {
+    return await request('/eventos');
+  },
+  async crear(datos) {
+    return await request('/eventos', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async actualizar(id, datos) {
+    return await request(`/eventos/${id}`, { method: 'PUT', body: JSON.stringify(datos) });
+  },
+  async eliminar(id) {
+    return await request(`/eventos/${id}`, { method: 'DELETE' });
+  }
+};
+
+// Precio de una estancia con las tarifas de temporada vigentes (público)
+export async function cotizarEstancia(habitacionId, entrada, salida) {
+  const q = new URLSearchParams({ habitacionId, entrada, salida }).toString();
+  return await request(`/publico/cotizacion?${q}`);
+}
+
+// ==================== AVISOS INSTANTÁNEOS E INCIDENCIAS ====================
+export const AvisosAPI = {
+  async recientes() {
+    return await request('/avisos');
+  },
+  async enviar(datos) {
+    return await request('/avisos', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  // URL del canal en tiempo real (EventSource no admite encabezados: el token va en la URL)
+  urlStream() {
+    let token = '';
+    try {
+      token = localStorage.getItem('hotel_session_token') || '';
+    } catch (e) {
+      token = '';
+    }
+    return `${BASE_URL}/avisos/stream?token=${encodeURIComponent(token)}`;
+  }
+};
+
+export const IncidenciasAPI = {
+  async listar(habitacionId) {
+    return await request(`/incidencias${habitacionId ? `?habitacionId=${habitacionId}` : ''}`);
+  },
+  async reportar(datos) {
+    return await request('/incidencias', { method: 'POST', body: JSON.stringify(datos) });
+  },
+  async atender(id) {
+    return await request(`/incidencias/${id}/atender`, { method: 'PATCH' });
+  },
+  async resolver(id, solucion) {
+    return await request(`/incidencias/${id}/resolver`, { method: 'PATCH', body: JSON.stringify({ solucion }) });
+  }
+};
+
+// ==================== MERCADO PAGO (pasarela de pago) ====================
+export const MercadoPagoAPI = {
+  async estado() {
+    return await request('/pagos/mercadopago/estado');
+  },
+  // Link de pago del saldo de una estadía (recepción)
+  async linkEstadia(estadiaId, monto) {
+    return await request(`/pagos/mercadopago/estadias/${estadiaId}`, {
+      method: 'POST',
+      body: JSON.stringify(monto ? { monto: Number(monto) } : {})
+    });
+  },
+  // Prepago de una reserva (los clientes usan ClienteAPI.pagar en lib/cliente.js)
+  async pagarReserva(codigoReserva) {
+    return await request(`/publico/reservas/${encodeURIComponent(codigoReserva)}/pagar`, { method: 'POST' });
+  },
+  // Al volver de Mercado Pago se verifica el pago contra su API
+  async verificar(paymentId) {
+    return await request(`/publico/mercadopago/verificar?payment_id=${encodeURIComponent(paymentId)}`, { method: 'POST' });
+  }
+};
+
+// ==================== MONITOREO (administrador y gerencia) ====================
+export const MonitoreoAPI = {
+  async resumen() {
+    return await request('/monitoreo');
   }
 };

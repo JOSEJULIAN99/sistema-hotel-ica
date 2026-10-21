@@ -18,7 +18,7 @@ import {
   Sparkles,
   ChevronDown
 } from 'lucide-react';
-import { EstadiaAPI, HabitacionAPI, HuespedAPI, ReservacionAPI } from '../../../lib/api';
+import { EstadiaAPI, HabitacionAPI, HuespedAPI, ReservacionAPI, MercadoPagoAPI } from '../../../lib/api';
 import { ModalCheckIn, ModalConsumo, ModalPago, ModalCheckOut } from '../../components/ModalesRecepcion';
 import ComprobanteModal from '../../components/ComprobanteModal';
 import { useToast } from '../../components/Toast';
@@ -39,6 +39,22 @@ export default function RecepcionPage() {
   const [modalConsumoOpen, setModalConsumoOpen] = useState(false);
   const [modalPagoOpen, setModalPagoOpen] = useState(false);
   const [modalCheckOutOpen, setModalCheckOutOpen] = useState(false);
+  const [linksPago, setLinksPago] = useState({});
+  const [generandoLink, setGenerandoLink] = useState(null);
+
+  // Link de Mercado Pago por el saldo de la estadía; el pago se registra cuando Mercado Pago lo aprueba
+  const generarLinkPago = async (estadia) => {
+    setGenerandoLink(estadia.id);
+    try {
+      const po = await MercadoPagoAPI.linkEstadia(estadia.id);
+      setLinksPago(prev => ({ ...prev, [estadia.id]: po }));
+      addToast('Link de pago generado. Envíelo al huésped o ábralo en la tablet de recepción.', 'success');
+    } catch (err) {
+      addToast(err.message || 'No se pudo generar el link de pago', 'error');
+    } finally {
+      setGenerandoLink(null);
+    }
+  };
   const [comprobanteData, setComprobanteData] = useState(null);
   const [comprobanteOpen, setComprobanteOpen] = useState(false);
 
@@ -286,6 +302,26 @@ export default function RecepcionPage() {
                       >
                         <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Registrar Abono
                       </button>
+
+                      {saldo > 0 && (
+                        <button
+                          onClick={() => generarLinkPago(estadia)}
+                          disabled={generandoLink === estadia.id}
+                          className="flex-1 sm:flex-none px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 border border-sky-200 disabled:opacity-60"
+                        >
+                          <CreditCard className="w-3.5 h-3.5 text-sky-600" /> {generandoLink === estadia.id ? 'Generando…' : 'Cobrar con Mercado Pago'}
+                        </button>
+                      )}
+                      {linksPago[estadia.id] && (
+                        <div className="w-full sm:w-56 p-2 rounded-xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 space-y-1">
+                          <p className="font-semibold">Link de pago (S/ {Number(linksPago[estadia.id].monto).toFixed(2)})</p>
+                          <div className="flex gap-2">
+                            <a href={linksPago[estadia.id].urlPago} target="_blank" rel="noopener noreferrer" className="font-bold underline">Abrir</a>
+                            <button type="button" onClick={() => navigator.clipboard && navigator.clipboard.writeText(linksPago[estadia.id].urlPago)} className="font-bold underline">Copiar</button>
+                          </div>
+                          <p className="text-sky-700">Se registra solo cuando Mercado Pago lo aprueba.</p>
+                        </div>
+                      )}
 
                       <button
                         onClick={() => {
