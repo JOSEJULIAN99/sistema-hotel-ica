@@ -17,6 +17,18 @@ Sistema web para la gestión del Hotel Princes Ica: habitaciones, huéspedes, re
 - IA libre (Llama): chatbot 24/7 para huéspedes, traducción y asistente de recepción
 - Tarifas dinámicas por feriados, festividades de Ica y ocupación, con aprobación e historial
 - Fotos de habitaciones en Supabase Storage y panel de monitoreo
+- Web pública con banner, buscador por fechas y disponibilidad real
+- Cuentas de clientes (registro, "Mis reservas", pago y cancelación) separadas del ingreso del personal
+- Personal creado solo por el administrador (módulo Usuarios); validación de documentos, celular y fechas
+
+## Accesos de prueba
+
+| Dónde | Usuario | Contraseña |
+| --- | --- | --- |
+| Panel del personal `/VistaPersonal/login` | `admin` (también `pluna`, `mgomez`, `rflores` con `hotel123`) | `admin123` |
+| Web del cliente `/cuenta` | `cliente@demo.com` | `cliente123` |
+
+La cuenta de cliente de demostración se crea sola si no hay clientes; se desactiva con `APP_CLIENTE_DEMO=false`. Para usar una foto real en el banner, guárdela como `frontend/public/portada.jpg`.
 
 Documentación en `docs/`: diagnóstico, modelo TO-BE, requisitos y costos, Supabase y Mercado Pago.
 

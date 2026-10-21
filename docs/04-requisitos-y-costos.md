@@ -38,7 +38,7 @@ Sistema web de gestión hotelera adaptado a la demanda turística y comercial de
 | RF-04 | Gestión de consumos | Minibar, restaurante y servicios en la cuenta de la habitación | 7 |
 | RF-05 | Control de habitaciones | Disponible, reservada, ocupada, limpieza o mantenimiento en tiempo real | 5, 7 |
 | RF-06 | Gestión de limpieza | Tareas con prioridad y avisos instantáneos desde recepción | 7, 15 |
-| RF-07 | Usuarios y roles | Cuentas por puesto creadas y activadas por el administrador | 4 |
+| RF-07 | Usuarios y roles | Cuentas del personal creadas por el administrador; sin auto-registro de trabajadores | 4, 20 |
 | RF-08 | Mantenimiento e incidencias | Reporte, bloqueo de habitación e historial | 15 |
 | RF-09 | Reportes y métricas | Ingresos, ocupación y flujo de huéspedes | 6 |
 | RF-10 | Asistente virtual con IA | Chatbot 24/7 con preguntas frecuentes y turismo de Ica | 13 |
@@ -48,6 +48,10 @@ Sistema web de gestión hotelera adaptado a la demanda turística y comercial de
 | RF-14 | Imágenes de habitaciones | Subida desde el panel a Supabase Storage | 12 |
 | RF-15 | Monitoreo y auditoría | Estado de servicios, actividad del personal y errores | 17 |
 | RF-16 | Asistente interno | Recomendar habitación, resumir el día y ordenar la limpieza | 8 |
+| RF-17 | Cuentas de clientes | Registro e ingreso propios del cliente; ve, paga y cancela solo sus reservas | 19 |
+| RF-18 | Gestión del personal | Pantalla Usuarios: alta, rol, turno, activación y restablecimiento de contraseña | 20 |
+| RF-19 | Disponibilidad por fechas | Buscador de la web con habitaciones libres y total de la estadía | 22 |
+| RF-20 | Validación de datos | Documento según tipo, celular, nombres, fechas y noches, en formulario y servidor | 23 |
 
 ## 4. Requerimientos no funcionales
 
