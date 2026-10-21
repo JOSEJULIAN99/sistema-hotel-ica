@@ -13,13 +13,15 @@ Issue: HPI-16 · Rama `feature/pagos-mercadopago` · RF-03
 ## Configuración en `.env`
 
 ```properties
-MP_ACCESS_TOKEN=TEST-xxxxxxxx      # credencial de prueba de la cuenta del hotel
+MP_MODO=prueba                     # prueba = sin dinero real; produccion = cobros reales
+MP_ACCESS_TOKEN=APP_USR-xxxxxxxx   # credencial de prueba (TEST-... o APP_USR-... de una cuenta de prueba)
 MP_WEBHOOK_SECRET=                 # opcional: valida la firma x-signature
 APP_FRONTEND_URL=http://localhost:3000
 APP_BACKEND_PUBLIC_URL=            # URL https pública del backend para el webhook
 ```
 
-- Credenciales: mercadopago.com.pe/developers → Tus integraciones → crear aplicación → Credenciales de prueba.
+- Credenciales: mercadopago.com.pe/developers → Tus integraciones → crear aplicación → Credenciales de prueba. Mercado Pago entrega hoy credenciales de prueba que empiezan con `APP_USR-`; por eso el modo lo decide `MP_MODO` y no el prefijo. Solo se usa el **Access Token**; la Public Key no hace falta con Checkout Pro.
+- Nunca se comparte el Access Token por chat ni se sube a GitHub: va solo en `.env`. Si se filtra, se regenera en la misma pantalla.
 - Para probar compras se usan **usuarios de prueba** (comprador) y las tarjetas de prueba que publica Mercado Pago.
 - En local el webhook no llega (no hay URL pública): la verificación ocurre al volver a `/pago/resultado`. Con un túnel HTTPS (por ejemplo ngrok) se puede completar `APP_BACKEND_PUBLIC_URL`.
 
@@ -29,4 +31,4 @@ Sin mensualidad. Mercado Pago cobra una comisión por transacción con tarjeta (
 
 ## Paso a producción
 
-Cambiar `MP_ACCESS_TOKEN` por la credencial productiva (`APP_USR-...`) de la cuenta del hotel y definir `APP_BACKEND_PUBLIC_URL` y `MP_WEBHOOK_SECRET`. No se cambia código.
+Cambiar `MP_ACCESS_TOKEN` por la credencial productiva (`APP_USR-...`) de la cuenta del hotel, poner `MP_MODO=produccion` y definir `APP_BACKEND_PUBLIC_URL` y `MP_WEBHOOK_SECRET`. No se cambia código.
