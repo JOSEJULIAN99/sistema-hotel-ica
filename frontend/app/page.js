@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import {
   Hotel,
   Calendar,
@@ -27,12 +26,11 @@ import {
   Lock,
   LogOut
 } from 'lucide-react';
-import { HabitacionAPI, ReservacionAPI, MercadoPagoAPI } from '../lib/api';
-import { AuthAPI } from '../lib/auth';
-import ModalReserva from './components/ModalReserva';
+import { HabitacionAPI } from '../lib/api';
 import ChatHuesped from './components/ChatHuesped';
-import ModalHuesped from './components/ModalHuesped';
-import { ToastProvider, useToast } from './components/Toast';
+import EncabezadoPublico from './components/publico/EncabezadoPublico';
+import ReservaClienteModal from './components/publico/ReservaClienteModal';
+import { ToastProvider } from './components/Toast';
 
 export default function Home() {
   return (
@@ -43,9 +41,6 @@ export default function Home() {
 }
 
 function HotelLandingContent() {
-  const router = useRouter();
-  const { addToast } = useToast();
-  const [usuario, setUsuario] = useState(null);
   const [habitaciones, setHabitaciones] = useState([]);
   const [checkIn, setCheckIn] = useState(() => new Date().toISOString().split('T')[0]);
   const [checkOut, setCheckOut] = useState(() => new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]);
@@ -55,12 +50,25 @@ function HotelLandingContent() {
   const [habSeleccionada, setHabSeleccionada] = useState(null);
 
   useEffect(() => {
-    setUsuario(AuthAPI.getUsuarioActual());
     async function load() {
       try {
         // La web pública solo consulta habitaciones; los huéspedes son datos privados
         const h = await HabitacionAPI.getAll();
         setHabitaciones(h || []);
+        // Al volver del ingreso o registro se retoma la reserva que el cliente había elegido
+        const params = new URLSearchParams(window.location.search);
+        const habId = params.get('hab');
+        if (habId) {
+          const elegida = (h || []).find((x) => String(x.id) === habId);
+          if (elegida) {
+            if (params.get('entrada')) setCheckIn(params.get('entrada'));
+            if (params.get('salida')) setCheckOut(params.get('salida'));
+            if (params.get('personas')) setHuespedesCount(Number(params.get('personas')));
+            setHabSeleccionada(elegida);
+            setModalReservaOpen(true);
+          }
+          window.history.replaceState(null, '', '/#habitaciones');
+        }
       } catch (e) {
         console.error(e);
       }
@@ -73,25 +81,6 @@ function HotelLandingContent() {
     setModalReservaOpen(true);
   };
 
-  const handleGuardarReserva = async (payload) => {
-    try {
-      const r = await ReservacionAPI.createPublica(payload);
-      addToast(`Solicitud ${r?.codigoReserva || ''} registrada. Recepción confirmará su reserva.`, 'success');
-      setModalReservaOpen(false);
-      // Prepago opcional con Mercado Pago: confirma la reserva automáticamente al aprobarse
-      if (r?.codigoReserva && window.confirm(`Reserva ${r.codigoReserva}. ¿Desea pagarla ahora en línea con Mercado Pago?`)) {
-        try {
-          const pago = await MercadoPagoAPI.pagarReserva(r.codigoReserva);
-          if (pago?.urlPago) window.location.href = pago.urlPago;
-        } catch (errPago) {
-          addToast(errPago.message || 'El pago en línea no está disponible; puede pagar en recepción.', 'warning');
-        }
-      }
-    } catch (err) {
-      addToast(err.message || 'Error al registrar reservación', 'error');
-    }
-  };
-
   const habitacionesFiltradas = habitaciones.filter((h) => {
     if (tipoFiltro !== 'TODOS' && h.tipo !== tipoFiltro) return false;
     if (huespedesCount && h.capacidad < Number(huespedesCount)) return false;
@@ -100,70 +89,7 @@ function HotelLandingContent() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col selection:bg-amber-500 selection:text-slate-950">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-400 rounded-xl text-slate-900 shadow-sm">
-              <Hotel className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 block">Hotel Princes</span>
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.18em] block">
-                Huacachina • Ica
-              </span>
-            </div>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-600">
-            <a href="#habitaciones" className="hover:text-slate-900 transition">Habitaciones</a>
-            <a href="#servicios" className="hover:text-slate-900 transition">Servicios</a>
-            <a href="#contacto" className="hover:text-slate-900 transition">Contacto</a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            {usuario ? (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/VistaPersonal"
-                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Panel ({usuario.rol})</span>
-                </Link>
-                <button
-                  onClick={() => {
-                    AuthAPI.logout();
-                    setUsuario(null);
-                    addToast('Sesión cerrada', 'info');
-                  }}
-                  className="p-2 text-slate-500 hover:text-rose-600 rounded-xl transition"
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <Link
-                href="/VistaPersonal/login"
-                className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
-              >
-                <Lock className="w-3.5 h-3.5 text-amber-500" />
-                <span>Iniciar Sesión</span>
-              </Link>
-            )}
-
-            <button
-              onClick={() => {
-                setHabSeleccionada(habitaciones[0] || null);
-                setModalReservaOpen(true);
-              }}
-              className="hidden sm:inline-flex px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-bold transition shadow-sm"
-            >
-              Reservar
-            </button>
-          </div>
-        </div>
-      </header>
+      <EncabezadoPublico />
 
       <section className="py-12 sm:py-16 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -402,24 +328,27 @@ function HotelLandingContent() {
           </div>
 
           <div>
-            <h4 className="font-bold text-white uppercase text-[11px] tracking-[0.18em] mb-3">Acceso al Sistema</h4>
+            <h4 className="font-bold text-white uppercase text-[11px] tracking-[0.18em] mb-3">Tu cuenta</h4>
             <Link
-              href="/VistaPersonal/login"
+              href="/cuenta"
               className="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-xl font-bold text-xs transition shadow-sm"
             >
-              <Lock className="w-3.5 h-3.5" /> Iniciar Sesión <ArrowRight className="w-3.5 h-3.5" />
+              Mis reservas <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link href="/VistaPersonal/login" className="mt-4 flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300">
+              <Lock className="w-3 h-3" /> Acceso del personal
             </Link>
           </div>
         </div>
       </footer>
 
-      <ModalReserva
-        isOpen={modalReservaOpen}
-        onClose={() => setModalReservaOpen(false)}
-        onSave={handleGuardarReserva}
-        habitacionPreseleccionada={habSeleccionada}
-        habitaciones={habitaciones}
-        modoPublico
+      <ReservaClienteModal
+        abierto={modalReservaOpen}
+        onCerrar={() => setModalReservaOpen(false)}
+        habitacion={habSeleccionada}
+        entradaInicial={checkIn}
+        salidaInicial={checkOut}
+        personasIniciales={huespedesCount}
       />
 
       {/* Chatbot 24/7 para huéspedes */}

@@ -658,14 +658,6 @@ export const ReservacionAPI = {
     }
   },
 
-  // Reserva desde la web pública (sin sesión): el servidor registra o reutiliza al huésped
-  async createPublica(data) {
-    return await request('/publico/reservas', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
   async confirmar(id) {
     try {
       return await request(`/reservaciones/${id}/confirmar`, { method: 'PATCH' });
@@ -1003,7 +995,7 @@ export const MercadoPagoAPI = {
       body: JSON.stringify(monto ? { monto: Number(monto) } : {})
     });
   },
-  // Prepago de una reserva desde la web pública
+  // Prepago de una reserva (los clientes usan ClienteAPI.pagar en lib/cliente.js)
   async pagarReserva(codigoReserva) {
     return await request(`/publico/reservas/${encodeURIComponent(codigoReserva)}/pagar`, { method: 'POST' });
   },

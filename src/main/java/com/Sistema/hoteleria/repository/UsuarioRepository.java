@@ -18,4 +18,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     List<Usuario> findByRol(RolUsuario rol);
 
     List<Usuario> findByActivoTrue();
+
+    /** Personal del hotel (todos los roles excepto CLIENTE). */
+    List<Usuario> findByRolNot(RolUsuario rol);
+
+    boolean existsByHuespedId(Long huespedId);
+
+    boolean existsByRol(RolUsuario rol);
 }

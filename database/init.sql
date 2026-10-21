@@ -196,6 +196,9 @@ INSERT INTO pagos (id, estadia_id, monto, metodo_pago, fecha_pago, nro_operacion
 INSERT INTO tareas_limpieza (id, habitacion_id, empleado_id, tipo_limpieza, estado, prioridad, observaciones, fecha_creacion, fecha_inicio, fecha_fin) VALUES
 (1, 3, 4, 'CHECKOUT', 'PENDIENTE', 'ALTA', 'Check-out realizado hoy. Requiere cambio de sábanas y desinfección completa.', NOW() - INTERVAL '2 hour', NULL, NULL);
 
+-- Cuentas de clientes: cada cuenta CLIENTE apunta a su ficha de huésped
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS huesped_id BIGINT UNIQUE REFERENCES huespedes(id);
+
 -- Ajustar secuencias automáticas de IDs en PostgreSQL
 SELECT setval(pg_get_serial_sequence('usuarios', 'id'), COALESCE(MAX(id), 1)) FROM usuarios;
 SELECT setval(pg_get_serial_sequence('habitaciones', 'id'), COALESCE(MAX(id), 1)) FROM habitaciones;

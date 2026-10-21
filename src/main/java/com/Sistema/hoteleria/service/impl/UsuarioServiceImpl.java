@@ -30,7 +30,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional(readOnly = true)
     public List<UsuarioDTO> obtenerTodos() {
-        return usuarioRepository.findAll().stream()
+        // Los clientes de la web no forman parte del personal
+        return usuarioRepository.findByRolNot(RolUsuario.CLIENTE).stream()
                 .map(EntityMapper::toUsuarioDTO)
                 .collect(Collectors.toList());
     }
@@ -66,6 +67,9 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() -> new BadRequestException("Usuario o contraseña incorrectos"));
         if (password == null || !passwordValida(u, password)) {
             throw new BadRequestException("Usuario o contraseña incorrectos");
+        }
+        if (u.getRol() == RolUsuario.CLIENTE) {
+            throw new BadRequestException("Esta cuenta es de cliente. Ingrese desde la web del hotel, en «Mi cuenta».");
         }
         if (Boolean.FALSE.equals(u.getActivo())) {
             throw new BadRequestException("El usuario se encuentra desactivado en el sistema");

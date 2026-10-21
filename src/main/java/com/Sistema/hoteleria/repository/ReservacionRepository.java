@@ -20,6 +20,8 @@ public interface ReservacionRepository extends JpaRepository<Reservacion, Long> 
 
     List<Reservacion> findByHuespedId(Long huespedId);
 
+    List<Reservacion> findByHuespedIdOrderByFechaEntradaDesc(Long huespedId);
+
     List<Reservacion> findByHabitacionId(Long habitacionId);
 
     boolean existsByHabitacionId(Long habitacionId);

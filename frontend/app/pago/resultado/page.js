@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { MercadoPagoAPI } from '../../../lib/api';
+import { ClienteAPI } from '../../../lib/cliente';
 
 // Página a la que vuelve el huésped después de pagar en Mercado Pago.
 // El pago se confirma consultando a Mercado Pago desde el backend, no por los datos de la URL.
@@ -12,8 +13,10 @@ export default function ResultadoPagoPage() {
   const [estado, setEstado] = useState('verificando');
   const [detalle, setDetalle] = useState(null);
   const [error, setError] = useState('');
+  const [esCliente, setEsCliente] = useState(false);
 
   useEffect(() => {
+    setEsCliente(ClienteAPI.isAuthenticated());
     const params = new URLSearchParams(window.location.search);
     const paymentId = params.get('payment_id') || params.get('collection_id');
     if (!paymentId || paymentId === 'null') {
@@ -48,7 +51,12 @@ export default function ResultadoPagoPage() {
             )}
           </>
         )}
-        <Link href="/" className="inline-block mt-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">Volver al inicio</Link>
+        <div className="flex flex-col gap-2 mt-2">
+          {esCliente && (
+            <Link href="/cuenta/reservas" className="px-4 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-bold">Ver mis reservas</Link>
+          )}
+          <Link href="/" className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">Volver al inicio</Link>
+        </div>
       </div>
     </main>
   );

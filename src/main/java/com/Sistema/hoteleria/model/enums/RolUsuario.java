@@ -4,5 +4,7 @@ public enum RolUsuario {
     ADMINISTRADOR,
     RECEPCIONISTA,
     LIMPIEZA,
-    GERENTE
+    GERENTE,
+    /** Cliente o huésped que se registra desde la web pública. No entra al panel del personal. */
+    CLIENTE
 }
