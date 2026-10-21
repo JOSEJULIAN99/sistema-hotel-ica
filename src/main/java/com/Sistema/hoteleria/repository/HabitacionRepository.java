@@ -1,6 +1,5 @@
 package com.Sistema.hoteleria.repository;
 
-<<<<<<< HEAD
 import com.Sistema.hoteleria.model.entity.Habitacion;
 import com.Sistema.hoteleria.model.enums.EstadoHabitacion;
 import com.Sistema.hoteleria.model.enums.TipoHabitacion;
@@ -38,13 +37,3 @@ public interface HabitacionRepository extends JpaRepository<Habitacion, Long> {
     List<Habitacion> findHabitacionesDisponiblesPorFechas(@Param("fechaEntrada") LocalDate fechaEntrada,
                                                          @Param("fechaSalida") LocalDate fechaSalida);
 }
-=======
-import com.Sistema.hoteleria.entity.Habitacion;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Optional;
-
-public interface HabitacionRepository extends JpaRepository<Habitacion, Long> {
-    Optional<Habitacion> findByNumero(String numero);
-}
->>>>>>> origin/frontend-VistaPersonal

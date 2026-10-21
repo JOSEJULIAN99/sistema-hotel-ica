@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,6 +14,7 @@ import {
   X,
   Filter
 } from 'lucide-react';
+import { AuthAPI } from '../../../lib/auth';
 import { LimpiezaAPI, HabitacionAPI, UsuarioAPI } from '../../../lib/api';
 import { useToast } from '../../components/Toast';
 
@@ -25,6 +25,10 @@ export default function LimpiezaPage() {
   const [personal, setPersonal] = useState([]);
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [loading, setLoading] = useState(true);
+
+  // Estados de control de roles 
+  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [isLimpiezaRole, setIsLimpiezaRole] = useState(false);
 
   // Modal Nueva Tarea
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,6 +41,11 @@ export default function LimpiezaPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const user = AuthAPI.getUsuarioActual();
+      if (user) {
+        setUsuarioActual(user);
+        setIsLimpiezaRole(user.rol === 'LIMPIEZA');
+      }
       const [t, h, u] = await Promise.all([
         LimpiezaAPI.getAll(),
         HabitacionAPI.getAll(),
@@ -142,18 +151,21 @@ export default function LimpiezaPage() {
                 Limpieza, Aseo & Mantenimiento
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                Asignación de habitaciones a camareras, flujo de desinfección y liberación a estado disponible.
+                {isLimpiezaRole
+                ? 'Panel de ejecución: Inicia y completa las tareas de desinfección asignadas.'
+                : 'Asignación de habitaciones a camareras, flujo de desinfección y liberación a estado disponible.'}
               </p>
             </div>
           </div>
         </div>
-
-        <button
-          onClick={() => setModalOpen(true)}
-          className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Programar Limpieza
-        </button>
+        {!isLimpiezaRole && (
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Programar Limpieza
+          </button>
+        )}
       </div>
 
       {/* Filtros */}
@@ -243,7 +255,7 @@ export default function LimpiezaPage() {
                       <span className="text-slate-500 flex items-center gap-1">
                         <User className="w-3.5 h-3.5 text-slate-400" /> Mucama Asignada:
                       </span>
-                      {isCompletada ? (
+                      {isCompletada || isLimpiezaRole ? (
                         <span className="font-bold text-slate-800">
                           {tarea.empleadoAsignado?.nombreCompleto || 'Personal de Turno'}
                         </span>
@@ -270,7 +282,7 @@ export default function LimpiezaPage() {
                   {isPendiente && (
                     <button
                       onClick={() => handleIniciar(tarea.id)}
-                      className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs"
+                      className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <Play className="w-4 h-4 fill-slate-950" /> Iniciar Limpieza
                     </button>
@@ -279,7 +291,7 @@ export default function LimpiezaPage() {
                   {isEnProceso && (
                     <button
                       onClick={() => handleCompletar(tarea.id)}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs"
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" /> Completar & Marcar Disponible
                     </button>
@@ -298,7 +310,7 @@ export default function LimpiezaPage() {
       )}
 
       {/* Modal Nueva Tarea */}
-      {modalOpen && (
+      {modalOpen && !isLimpiezaRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden my-8 border border-slate-200">
             <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
@@ -407,105 +419,3 @@ export default function LimpiezaPage() {
     </div>
   );
 }
-=======
-import Sidebar from '../componentes/Sidebar';
-import Header from '../componentes/Header';
-
-export default function LimpiezaPage() {
-  return (
-    <div className="flex h-screen bg-slate-50 font-sans">
-      
-      {/*Sidebar reutilizado */}
-      <Sidebar activo="limpieza" />
-
-     
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        
-        {/* Header reutilizado*/}
-        <Header 
-          titulo="Control de Limpieza y Pisos" 
-          subtitulo="Monitoreo de estado de higienización de habitaciones" 
-        />
-
-        <div className="p-10 space-y-6">
-          
-          {/* Métricas rápidas */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">Habitaciones Limpias</p>
-              <p className="text-xl font-bold text-emerald-600 mt-1">28</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">En Proceso de Limpieza</p>
-              <p className="text-xl font-bold text-amber-600 mt-1">2</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <p className="text-xs text-gray-500 font-medium">Pendientes de Revisión</p>
-              <p className="text-xl font-bold text-slate-600 mt-1">0</p>
-            </div>
-          </div>
-
-          {/* Tabla de Control de Limpieza */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-800">Estado de Pisos y Limpieza</h3>
-              <input 
-                type="text" 
-                placeholder="Filtrar por habitación..." 
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs w-64 text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Habitación</th>
-                  <th className="p-4 font-semibold">Piso</th>
-                  <th className="p-4 font-semibold">Personal Asignado</th>
-                  <th className="p-4 font-semibold">Estado de Limpieza</th>
-                  <th className="p-4 font-semibold text-center">Acciones / Reporte</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-slate-700">
-                <tr className="hover:bg-gray-50/50 transition">
-                  <td className="p-4 font-bold text-slate-800">308</td>
-                  <td className="p-4">Piso 3</td>
-                  <td className="p-4">Rosa Gómez</td>
-                  <td className="p-4">
-                    <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium text-[11px]">En Limpieza</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-blue-600 hover:underline font-medium">Actualizar estado</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition">
-                  <td className="p-4 font-bold text-slate-800">105</td>
-                  <td className="p-4">Piso 1</td>
-                  <td className="p-4">Juana Quispe</td>
-                  <td className="p-4">
-                    <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium text-[11px]">LIMPIO / Listo</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-blue-600 hover:underline font-medium">Actualizar estado</button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition">
-                  <td className="p-4 font-bold text-slate-800">202</td>
-                  <td className="p-4">Piso 2</td>
-                  <td className="p-4">Rosa Gómez</td>
-                  <td className="p-4">
-                    <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium text-[11px]">LIMPIO / Listo</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-blue-600 hover:underline font-medium">Actualizar estado</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-        </div>
-      </main>
-    </div>
-  );
-}
->>>>>>> origin/frontend-VistaPersonal

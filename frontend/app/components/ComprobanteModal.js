@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Printer, CheckCircle, X, Hotel, Calendar, User, CreditCard, ShieldCheck } from 'lucide-react';
+import { Printer, CheckCircle, X, Hotel, ShieldCheck } from 'lucide-react';
 
 export default function ComprobanteModal({ data, isOpen, onClose }) {
   if (!isOpen || !data) return null;
@@ -15,7 +15,77 @@ export default function ComprobanteModal({ data, isOpen, onClose }) {
   });
 
   const handlePrint = () => {
-    window.print();
+    const contenidoVoucher = document.getElementById('printable-voucher').innerHTML;
+    const ventanaImpresion = window.open('', '_blank', 'width=800,height=600');
+    
+    if (!ventanaImpresion) {
+      alert('Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para imprimir.');
+      return;
+    }
+
+    ventanaImpresion.document.write(`
+      <html>
+        <head>
+          <title>Comprobante - Hotel Princes</title>
+          <style>
+            body { font-family: ui-sans-serif, system-ui, sans-serif; padding: 20px; color: #1e293b; background: white; margin: 0; }
+            .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
+            th { border-bottom: 1px solid #cbd5e1; text-align: left; padding: 8px 0; color: #64748b; text-transform: uppercase; font-size: 10px; }
+            td { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .items-start { align-items: flex-start; }
+            .items-end { align-items: flex-end; }
+            .border-b-2 { border-bottom-width: 2px; }
+            .border-amber-500\/30 { border-color: rgba(245, 158, 11, 0.3); }
+            .pb-6 { padding-bottom: 24px; }
+            .mb-6 { margin-bottom: 24px; }
+            .p-4 { padding: 16px; }
+            .rounded-xl { border-radius: 0.75rem; }
+            .bg-slate-50 { background-color: #f8fafc; }
+            .border { border: 1px solid #e2e8f0; }
+            .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+            .text-xs { font-size: 0.75rem; }
+            .text-sm { font-size: 0.875rem; }
+            .text-lg { font-size: 1.125rem; }
+            .text-2xl { font-size: 1.5rem; }
+            .font-black { font-weight: 900; }
+            .text-slate-400 { color: #94a3b8; }
+            .text-slate-500 { color: #64748b; }
+            .text-slate-600 { color: #475569; }
+            .text-slate-800 { color: #1e293b; }
+            .text-slate-900 { color: #0f172a; }
+            .text-amber-600 { color: #d97706; }
+            .text-emerald-600 { color: #059669; }
+            .uppercase { text-transform: uppercase; }
+            .tracking-widest { letter-spacing: 0.1em; }
+            .tracking-tight { letter-spacing: -0.025em; }
+            .space-y-1\\.5 > * + * { margin-top: 0.375rem; }
+            .pt-4 { padding-top: 1rem; }
+            .border-t { border-top-width: 1px; }
+            .border-dashed { border-style: dashed; }
+            .text-center { text-align: center; }
+            .max-w-xs { max-width: 20rem; }
+            .w-64 { width: 16rem; }
+            .shrink-0 { flex-shrink: 0; }
+            .gap-2 { gap: 0.5rem; }
+          </style>
+        </head>
+        <body>
+          ${contenidoVoucher}
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    ventanaImpresion.document.close();
   };
 
   const nroComprobante = `B001-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -24,8 +94,8 @@ export default function ComprobanteModal({ data, isOpen, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden my-8 border border-slate-200">
         
-        {/* Header Acciones (Oculto al imprimir) */}
-        <div className="no-print flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
+        {/* Header Acciones */}
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-emerald-400" />
             <h3 className="font-semibold text-base text-slate-100">Check-Out Liquidado & Facturación</h3>
@@ -152,7 +222,7 @@ export default function ComprobanteModal({ data, isOpen, onClose }) {
         </div>
 
         {/* Footer Modal */}
-        <div className="no-print px-6 py-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-3">
+        <div className="px-6 py-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-3">
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition shadow"
