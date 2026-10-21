@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useToast } from './Toast';
 import { HuespedAPI, cotizarEstancia } from '../../lib/api';
+import * as V from '../../lib/validaciones';
 
 export default function ModalReserva({
   isOpen,
@@ -132,6 +133,11 @@ export default function ModalReserva({
       if (modoHuesped === 'NUEVO') {
         if (!nombres.trim() || !apellidos.trim() || !numeroDocumento.trim()) {
           throw new Error('Por favor ingresa Nombres, Apellidos y Número de Documento del Huésped');
+        }
+
+        const erroresHuesped = V.huesped({ nombres, apellidos, tipoDocumento, numeroDocumento, telefono, email });
+        if (Object.keys(erroresHuesped).length > 0) {
+          throw new Error(Object.values(erroresHuesped).join('. '));
         }
 
         const nuevoHuesped = await HuespedAPI.create({

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X, CalendarDays, Users, CheckCircle2, CreditCard, Lock, User, BedDouble } from 'lucide-react';
 import { ClienteAPI } from '../../../lib/cliente';
 import { cotizarEstancia } from '../../../lib/api';
+import * as V from '../../../lib/validaciones';
 
 const IMAGEN_POR_DEFECTO = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=70';
 
@@ -30,6 +31,7 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
   const [cotizacion, setCotizacion] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [erroresServidor, setErroresServidor] = useState({});
   const [reserva, setReserva] = useState(null);
   const [pagando, setPagando] = useState(false);
 
@@ -41,6 +43,7 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
     setPersonas(Math.min(Number(personasIniciales) || 1, habitacion?.capacidad || 1));
     setObservaciones('');
     setError('');
+    setErroresServidor({});
     setReserva(null);
   }, [abierto, habitacion, entradaInicial, salidaInicial, personasIniciales]);
 
@@ -62,13 +65,24 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
   const precioNoche = Number(habitacion.precioPorNoche || 0);
   const total = cotizacion ? Number(cotizacion.total) : precioNoche * noches;
   const ajuste = cotizacion ? Number(cotizacion.ajusteTemporada || 0) : 0;
+  // Validación en vivo (mismas reglas que el servidor) + errores que devolvió el servidor por campo
+  const erroresVivos = V.estancia({
+    fechaEntrada: entrada,
+    fechaSalida: salida,
+    numeroPersonas: personas,
+    capacidad: habitacion.capacidad,
+    observaciones
+  });
+  const errores = { ...erroresServidor, ...erroresVivos };
+  const hayErrores = Object.keys(erroresVivos).length > 0;
   const volver = `/?hab=${habitacion.id}&entrada=${entrada}&salida=${salida}&personas=${personas}`;
 
   const confirmar = async (e) => {
     e.preventDefault();
     setError('');
-    if (!(salida > entrada)) {
-      setError('La fecha de salida debe ser posterior a la de llegada.');
+    setErroresServidor({});
+    if (hayErrores) {
+      setError('Revise los datos marcados.');
       return;
     }
     setEnviando(true);
@@ -84,6 +98,7 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
       if (onReservada) onReservada(r);
     } catch (err) {
       if (err.status === 401) setCliente(null);
+      if (err.campos) setErroresServidor(err.campos);
       setError(err.message);
     } finally {
       setEnviando(false);
@@ -174,12 +189,14 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
                       setEntrada(e.target.value);
                       if (salida <= e.target.value) setSalida(sumarDias(e.target.value, 1));
                     }}
-                    className="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                    className={`mt-1 w-full px-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-400 ${errores.fechaEntrada ? 'border-rose-400' : 'border-slate-300'}`} />
+                  {errores.fechaEntrada && <p className="mt-1 text-xs text-rose-600">{errores.fechaEntrada}</p>}
                 </label>
                 <label className="block text-sm">
                   <span className="font-semibold text-slate-700 flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> Salida</span>
-                  <input type="date" value={salida} min={sumarDias(entrada, 1)} required onChange={(e) => setSalida(e.target.value)}
-                    className="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <input type="date" value={salida} min={sumarDias(entrada, 1)} max={sumarDias(entrada, V.MAX_NOCHES_WEB)} required onChange={(e) => setSalida(e.target.value)}
+                    className={`mt-1 w-full px-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-400 ${errores.fechaSalida ? 'border-rose-400' : 'border-slate-300'}`} />
+                  {errores.fechaSalida && <p className="mt-1 text-xs text-rose-600">{errores.fechaSalida}</p>}
                 </label>
               </div>
 
@@ -191,6 +208,7 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
                     <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'personas'}</option>
                   ))}
                 </select>
+                {errores.numeroPersonas && <p className="mt-1 text-xs text-rose-600">{errores.numeroPersonas}</p>}
               </label>
 
               <label className="block text-sm">
@@ -198,6 +216,7 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
                 <textarea rows={2} maxLength={300} value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
                   placeholder="Ej: llegaré de noche, necesito cuna…"
                   className="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <p className="text-right text-[11px] text-slate-400">{observaciones.length}/{V.MAX_OBSERVACIONES}</p>
               </label>
 
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
@@ -210,7 +229,7 @@ export default function ReservaClienteModal({ abierto, onCerrar, habitacion, ent
 
               {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3">{error}</p>}
 
-              <button type="submit" disabled={enviando || noches < 1}
+              <button type="submit" disabled={enviando || hayErrores}
                 className="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm transition disabled:opacity-50">
                 {enviando ? 'Reservando…' : 'Confirmar reserva'}
               </button>

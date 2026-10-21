@@ -52,7 +52,7 @@ class ClienteCuentaServiceTest {
                 .nombres("Ana María").apellidos(apellidos)
                 .tipoDocumento(TipoDocumento.DNI).numeroDocumento("45678912")
                 .email("  Ana@Correo.com ").telefono("987654321")
-                .password("clave-segura")
+                .password("clave2026")
                 .build();
     }
 
@@ -60,7 +60,7 @@ class ClienteCuentaServiceTest {
     @DisplayName("El registro crea la ficha de huésped y una cuenta CLIENTE con el correo como usuario")
     void registroCreaCuentaCliente() {
         when(huespedRepository.save(any(Huesped.class))).thenAnswer(i -> i.getArgument(0));
-        when(passwordEncoder.encode("clave-segura")).thenReturn("$2a$hash");
+        when(passwordEncoder.encode("clave2026")).thenReturn("$2a$hash");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
         when(jwtService.generarToken(any(Usuario.class))).thenReturn("token");
 

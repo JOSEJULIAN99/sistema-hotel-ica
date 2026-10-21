@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, User, ShieldCheck, CalendarCheck2, CreditCard, ArrowRight } from 'lucide-react';
 import { ClienteAPI } from '../../lib/cliente';
+import * as V from '../../lib/validaciones';
 import { useToast } from '../components/Toast';
 
 // Solo se permite volver a una ruta interna (evita redirecciones a otros sitios)
@@ -25,17 +26,6 @@ const REGISTRO_VACIO = {
   password: '',
   confirmar: ''
 };
-
-function validarRegistro(d) {
-  const e = {};
-  if (!d.nombres.trim()) e.nombres = 'Ingrese sus nombres';
-  if (!d.apellidos.trim()) e.apellidos = 'Ingrese sus apellidos';
-  if (!d.numeroDocumento.trim()) e.numeroDocumento = 'Ingrese su número de documento';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email.trim())) e.email = 'Ingrese un correo válido';
-  if (d.password.length < 8) e.password = 'Use al menos 8 caracteres';
-  if (d.confirmar !== d.password) e.confirmar = 'Las contraseñas no coinciden';
-  return e;
-}
 
 export default function CuentaPage() {
   const router = useRouter();
@@ -58,8 +48,17 @@ export default function CuentaPage() {
   }, [router]);
 
   const cambiar = (campo) => (e) => {
-    setRegistro((r) => ({ ...r, [campo]: e.target.value }));
+    let valor = e.target.value;
+    if (campo === 'numeroDocumento') valor = valor.toUpperCase().replace(/\s/g, '');
+    if (campo === 'numeroDocumento' && registro.tipoDocumento === 'DNI') valor = valor.replace(/\D/g, '').slice(0, 8);
+    setRegistro((r) => ({ ...r, [campo]: valor }));
     if (errores[campo]) setErrores((x) => ({ ...x, [campo]: undefined }));
+  };
+
+  // Al salir de un campo se revisa solo ese campo, para avisar sin esperar al botón
+  const revisar = (campo) => () => {
+    const msg = V.registroCliente(registro)[campo];
+    setErrores((x) => ({ ...x, [campo]: msg }));
   };
 
   const ingresar = async (e) => {
@@ -82,7 +81,7 @@ export default function CuentaPage() {
 
   const registrarse = async (e) => {
     e.preventDefault();
-    const encontrados = validarRegistro(registro);
+    const encontrados = V.registroCliente(registro);
     setErrores(encontrados);
     if (Object.keys(encontrados).length > 0) {
       addToast('Revise los campos marcados', 'error');
@@ -189,13 +188,13 @@ export default function CuentaPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Nombres *</span>
-                <input value={registro.nombres} onChange={cambiar('nombres')} autoComplete="given-name"
+                <input value={registro.nombres} onChange={cambiar('nombres')} onBlur={revisar('nombres')} autoComplete="given-name"
                   className={`mt-1 ${campo} ${borde('nombres')}`} placeholder="Ej: Ana María" />
                 <ErrorCampo nombre="nombres" />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Apellidos *</span>
-                <input value={registro.apellidos} onChange={cambiar('apellidos')} autoComplete="family-name"
+                <input value={registro.apellidos} onChange={cambiar('apellidos')} onBlur={revisar('apellidos')} autoComplete="family-name"
                   className={`mt-1 ${campo} ${borde('apellidos')}`} placeholder="Ej: Quispe Rojas" />
                 <ErrorCampo nombre="apellidos" />
               </label>
@@ -209,19 +208,20 @@ export default function CuentaPage() {
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Número de documento *</span>
-                <input value={registro.numeroDocumento} onChange={cambiar('numeroDocumento')}
+                <input value={registro.numeroDocumento} onChange={cambiar('numeroDocumento')} onBlur={revisar('numeroDocumento')}
+                  inputMode={registro.tipoDocumento === 'DNI' ? 'numeric' : 'text'}
                   className={`mt-1 ${campo} ${borde('numeroDocumento')}`} placeholder={registro.tipoDocumento === 'DNI' ? '8 dígitos' : 'Como figura en el documento'} />
                 <ErrorCampo nombre="numeroDocumento" />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Correo *</span>
-                <input type="email" value={registro.email} onChange={cambiar('email')} autoComplete="email"
+                <input type="email" value={registro.email} onChange={cambiar('email')} onBlur={revisar('email')} autoComplete="email"
                   className={`mt-1 ${campo} ${borde('email')}`} placeholder="tu@correo.com" />
                 <ErrorCampo nombre="email" />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Celular</span>
-                <input type="tel" value={registro.telefono} onChange={cambiar('telefono')} autoComplete="tel"
+                <input type="tel" value={registro.telefono} onChange={cambiar('telefono')} onBlur={revisar('telefono')} autoComplete="tel"
                   className={`mt-1 ${campo} ${borde('telefono')}`} placeholder="987654321" />
                 <ErrorCampo nombre="telefono" />
               </label>
@@ -237,13 +237,13 @@ export default function CuentaPage() {
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Contraseña *</span>
-                <input type="password" value={registro.password} onChange={cambiar('password')} autoComplete="new-password"
-                  className={`mt-1 ${campo} ${borde('password')}`} placeholder="Mínimo 8 caracteres" />
+                <input type="password" value={registro.password} onChange={cambiar('password')} onBlur={revisar('password')} autoComplete="new-password"
+                  className={`mt-1 ${campo} ${borde('password')}`} placeholder="Letras y números, mínimo 8" />
                 <ErrorCampo nombre="password" />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">Repetir contraseña *</span>
-                <input type="password" value={registro.confirmar} onChange={cambiar('confirmar')} autoComplete="new-password"
+                <input type="password" value={registro.confirmar} onChange={cambiar('confirmar')} onBlur={revisar('confirmar')} autoComplete="new-password"
                   className={`mt-1 ${campo} ${borde('confirmar')}`} />
                 <ErrorCampo nombre="confirmar" />
               </label>

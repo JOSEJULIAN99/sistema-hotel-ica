@@ -19,7 +19,9 @@ import com.Sistema.hoteleria.repository.ReservacionRepository;
 import com.Sistema.hoteleria.repository.UsuarioRepository;
 import com.Sistema.hoteleria.security.JwtService;
 import com.Sistema.hoteleria.service.ReservacionService;
+import com.Sistema.hoteleria.model.enums.TipoDocumento;
 import com.Sistema.hoteleria.util.EntityMapper;
+import com.Sistema.hoteleria.util.ValidadorDatos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -53,6 +55,16 @@ public class ClienteCuentaService {
 
     @Transactional
     public SesionClienteDTO registrar(RegistroClienteDTO dto) {
+        ValidadorDatos.errores()
+                .agregar("nombres", ValidadorDatos.nombre(dto.getNombres(), "nombres"))
+                .agregar("apellidos", ValidadorDatos.nombre(dto.getApellidos(), "apellidos"))
+                .agregar("numeroDocumento", dto.getTipoDocumento() == TipoDocumento.RUC
+                        ? "Para la cuenta personal use DNI, carné de extranjería o pasaporte"
+                        : ValidadorDatos.documento(dto.getTipoDocumento(), dto.getNumeroDocumento()))
+                .agregar("email", ValidadorDatos.email(dto.getEmail()))
+                .agregar("telefono", ValidadorDatos.telefono(dto.getTelefono()))
+                .agregar("password", ValidadorDatos.password(dto.getPassword()))
+                .lanzarSiHay();
         String email = normalizarEmail(dto.getEmail());
         if (usuarioRepository.existsByUsername(email)) {
             throw new BadRequestException("Ya existe una cuenta con el correo " + email + ". Inicie sesión.");
@@ -68,7 +80,7 @@ public class ClienteCuentaService {
                         .apellidos(apellidos)
                         .tipoDocumento(dto.getTipoDocumento())
                         .numeroDocumento(documento)
-                        .telefono(vacioANull(dto.getTelefono()))
+                        .telefono(normalizarTelefono(dto.getTelefono()))
                         .email(email)
                         .nacionalidad(vacioANull(dto.getNacionalidad()))
                         .ciudadProcedencia(vacioANull(dto.getCiudadProcedencia()))
@@ -102,7 +114,7 @@ public class ClienteCuentaService {
                     + "Acérquese a recepción para corregirlos.");
         }
         existente.setEmail(email);
-        if (vacioANull(dto.getTelefono()) != null) existente.setTelefono(dto.getTelefono().trim());
+        if (vacioANull(dto.getTelefono()) != null) existente.setTelefono(normalizarTelefono(dto.getTelefono()));
         if (vacioANull(dto.getNacionalidad()) != null) existente.setNacionalidad(dto.getNacionalidad().trim());
         if (vacioANull(dto.getCiudadProcedencia()) != null) existente.setCiudadProcedencia(dto.getCiudadProcedencia().trim());
         return existente;
@@ -134,9 +146,10 @@ public class ClienteCuentaService {
 
     @Transactional
     public PerfilClienteDTO actualizarPerfil(String username, ActualizarPerfilDTO dto) {
+        ValidadorDatos.errores().agregar("telefono", ValidadorDatos.telefono(dto.getTelefono())).lanzarSiHay();
         Usuario u = cuenta(username);
         Huesped h = u.getHuesped();
-        h.setTelefono(vacioANull(dto.getTelefono()));
+        h.setTelefono(normalizarTelefono(dto.getTelefono()));
         h.setNacionalidad(vacioANull(dto.getNacionalidad()));
         h.setCiudadProcedencia(vacioANull(dto.getCiudadProcedencia()));
         u.setTelefono(h.getTelefono());
@@ -157,6 +170,7 @@ public class ClienteCuentaService {
 
     @Transactional
     public ReservacionDTO reservar(String username, ReservaClienteDTO dto) {
+        ValidadorDatos.estanciaWeb(dto.getFechaEntrada(), dto.getFechaSalida(), dto.getNumeroPersonas(), dto.getObservaciones());
         Long huespedId = cuenta(username).getHuesped().getId();
         return reservacionService.crearPendiente(ReservacionRequestDTO.builder()
                 .huespedId(huespedId)
@@ -230,6 +244,10 @@ public class ClienteCuentaService {
 
     private static String limpiar(String texto) {
         return texto == null ? null : texto.trim().replaceAll("\\s+", " ");
+    }
+
+    private static String normalizarTelefono(String telefono) {
+        return telefono == null || telefono.isBlank() ? null : telefono.replaceAll("[\\s-]", "");
     }
 
     private static String vacioANull(String texto) {

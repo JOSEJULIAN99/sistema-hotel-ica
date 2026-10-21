@@ -9,6 +9,7 @@ import com.Sistema.hoteleria.repository.HuespedRepository;
 import com.Sistema.hoteleria.repository.ReservacionRepository;
 import com.Sistema.hoteleria.service.HuespedService;
 import com.Sistema.hoteleria.util.EntityMapper;
+import com.Sistema.hoteleria.util.ValidadorDatos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +63,8 @@ public class HuespedServiceImpl implements HuespedService {
     @Override
     @Transactional
     public HuespedDTO crear(HuespedDTO dto) {
+        validar(dto);
+        dto.setNumeroDocumento(dto.getNumeroDocumento().trim().toUpperCase());
         if (huespedRepository.existsByNumeroDocumento(dto.getNumeroDocumento())) {
             throw new BadRequestException("Ya existe un huésped con el documento: " + dto.getNumeroDocumento());
         }
@@ -83,6 +86,8 @@ public class HuespedServiceImpl implements HuespedService {
     public HuespedDTO actualizar(Long id, HuespedDTO dto) {
         Huesped h = huespedRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Huésped", "id", id));
+        validar(dto);
+        dto.setNumeroDocumento(dto.getNumeroDocumento().trim().toUpperCase());
 
         if (!h.getNumeroDocumento().equalsIgnoreCase(dto.getNumeroDocumento()) &&
                 huespedRepository.existsByNumeroDocumento(dto.getNumeroDocumento())) {
@@ -111,5 +116,16 @@ public class HuespedServiceImpl implements HuespedService {
             throw new BadRequestException("El huésped tiene reservas o estadías registradas; no se puede eliminar para conservar el historial");
         }
         huespedRepository.deleteById(id);
+    }
+
+    /** Mismas reglas que la web: nombre, documento según su tipo, celular y correo. */
+    private static void validar(HuespedDTO dto) {
+        ValidadorDatos.errores()
+                .agregar("nombres", ValidadorDatos.nombre(dto.getNombres(), "nombres"))
+                .agregar("apellidos", ValidadorDatos.nombre(dto.getApellidos(), "apellidos"))
+                .agregar("numeroDocumento", ValidadorDatos.documento(dto.getTipoDocumento(), dto.getNumeroDocumento()))
+                .agregar("telefono", ValidadorDatos.telefono(dto.getTelefono()))
+                .agregar("email", ValidadorDatos.email(dto.getEmail()))
+                .lanzarSiHay();
     }
 }
