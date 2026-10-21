@@ -117,7 +117,7 @@ export default function CuentaPage() {
       <section className="hidden lg:block rounded-3xl overflow-hidden bg-slate-900 text-white p-8 relative min-h-[520px]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-40"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=70')" }}
+          style={{ backgroundImage: "url('/portada.jpg'), url('/portada-huacachina.svg')" }}
         />
         <div className="relative space-y-6">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300">Tu cuenta en Hotel Princes</span>

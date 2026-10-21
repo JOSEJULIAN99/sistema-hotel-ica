@@ -899,6 +899,11 @@ export const PublicoAPI = {
   async hotel() {
     return await request('/publico/hotel');
   },
+  // Habitaciones libres para unas fechas y número de personas (con el total de la estadía)
+  async disponibilidad(entrada, salida, personas) {
+    const q = new URLSearchParams({ entrada, salida, personas: String(personas || 1) }).toString();
+    return await request(`/publico/disponibilidad?${q}`);
+  },
   // mensajes: [{ rol: 'usuario' | 'asistente', contenido }]
   async chat(mensajes) {
     return await request('/publico/chat', { method: 'POST', body: JSON.stringify({ mensajes }) });

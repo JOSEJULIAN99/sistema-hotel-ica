@@ -56,7 +56,7 @@ export default function LoginPersonalPage() {
       <section className="hidden lg:flex flex-col justify-between p-10 text-white relative overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=70')" }}
+          style={{ backgroundImage: "url('/portada.jpg'), url('/portada-huacachina.svg')" }}
         />
         <div className="relative flex items-center gap-3">
           <span className="p-2.5 bg-amber-400 rounded-xl text-slate-900"><Hotel className="w-6 h-6" /></span>
