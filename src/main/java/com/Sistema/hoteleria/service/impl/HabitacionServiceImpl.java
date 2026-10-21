@@ -7,7 +7,10 @@ import com.Sistema.hoteleria.exception.ResourceNotFoundException;
 import com.Sistema.hoteleria.model.entity.Habitacion;
 import com.Sistema.hoteleria.model.enums.EstadoHabitacion;
 import com.Sistema.hoteleria.model.enums.TipoHabitacion;
+import com.Sistema.hoteleria.repository.EstadiaRepository;
 import com.Sistema.hoteleria.repository.HabitacionRepository;
+import com.Sistema.hoteleria.repository.ReservacionRepository;
+import com.Sistema.hoteleria.repository.TareaLimpiezaRepository;
 import com.Sistema.hoteleria.service.HabitacionService;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,9 @@ import java.util.stream.Collectors;
 public class HabitacionServiceImpl implements HabitacionService {
 
     private final HabitacionRepository habitacionRepository;
+    private final ReservacionRepository reservacionRepository;
+    private final EstadiaRepository estadiaRepository;
+    private final TareaLimpiezaRepository tareaLimpiezaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -145,6 +151,10 @@ public class HabitacionServiceImpl implements HabitacionService {
     public void eliminar(Long id) {
         if (!habitacionRepository.existsById(id)) {
             throw new ResourceNotFoundException("Habitación", "id", id);
+        }
+        if (reservacionRepository.existsByHabitacionId(id) || estadiaRepository.existsByHabitacionId(id)
+                || tareaLimpiezaRepository.existsByHabitacionId(id)) {
+            throw new BadRequestException("La habitación tiene historial de reservas, estadías o limpieza; márquela en MANTENIMIENTO en lugar de eliminarla");
         }
         habitacionRepository.deleteById(id);
     }

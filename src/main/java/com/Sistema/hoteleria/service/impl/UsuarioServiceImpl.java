@@ -1,14 +1,18 @@
 package com.Sistema.hoteleria.service.impl;
 
+import com.Sistema.hoteleria.dto.LoginResponseDTO;
 import com.Sistema.hoteleria.dto.UsuarioDTO;
+import com.Sistema.hoteleria.dto.UsuarioRequestDTO;
 import com.Sistema.hoteleria.exception.BadRequestException;
 import com.Sistema.hoteleria.exception.ResourceNotFoundException;
 import com.Sistema.hoteleria.model.entity.Usuario;
 import com.Sistema.hoteleria.model.enums.RolUsuario;
 import com.Sistema.hoteleria.repository.UsuarioRepository;
+import com.Sistema.hoteleria.security.JwtService;
 import com.Sistema.hoteleria.service.UsuarioService;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,8 @@ import java.util.stream.Collectors;
 public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,38 +60,73 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public UsuarioDTO login(String username, String password) {
+    @Transactional
+    public LoginResponseDTO login(String username, String password) {
         Usuario u = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("Usuario o contraseña incorrectos"));
-        if (password == null || !password.equals(u.getPassword())) {
+        if (password == null || !passwordValida(u, password)) {
             throw new BadRequestException("Usuario o contraseña incorrectos");
         }
         if (Boolean.FALSE.equals(u.getActivo())) {
             throw new BadRequestException("El usuario se encuentra desactivado en el sistema");
         }
-        return EntityMapper.toUsuarioDTO(u);
+        return LoginResponseDTO.builder()
+                .token(jwtService.generarToken(u))
+                .tipo("Bearer")
+                .expiraEnMinutos(jwtService.getExpirationMinutes())
+                .usuario(EntityMapper.toUsuarioDTO(u))
+                .build();
+    }
+
+    /**
+     * Valida la contraseña con BCrypt. Si la cuenta aún tiene una contraseña antigua
+     * en texto plano (datos de init.sql), se acepta una única vez y se migra a BCrypt.
+     */
+    private boolean passwordValida(Usuario u, String password) {
+        String guardada = u.getPassword();
+        if (guardada == null) {
+            return false;
+        }
+        if (guardada.startsWith("$2")) {
+            return passwordEncoder.matches(password, guardada);
+        }
+        if (guardada.equals(password)) {
+            u.setPassword(passwordEncoder.encode(password));
+            usuarioRepository.save(u);
+            return true;
+        }
+        return false;
     }
 
     @Override
     @Transactional
-    public UsuarioDTO crear(UsuarioDTO dto, String password) {
-        if (usuarioRepository.existsByUsername(dto.getUsername())) {
-            throw new BadRequestException("El nombre de usuario '" + dto.getUsername() + "' ya está registrado");
-        }
+    public UsuarioDTO crear(UsuarioRequestDTO dto) {
+        return EntityMapper.toUsuarioDTO(usuarioRepository.save(nuevoUsuario(dto,
+                dto.getRol() != null ? dto.getRol() : RolUsuario.RECEPCIONISTA, true)));
+    }
 
-        Usuario u = Usuario.builder()
-                .username(dto.getUsername())
-                .password(password != null ? password : "password123")
+    /** Registro desde la pantalla pública: queda como RECEPCIONISTA inactivo hasta que un administrador lo active. */
+    @Override
+    @Transactional
+    public UsuarioDTO registrarPendiente(UsuarioRequestDTO dto) {
+        return EntityMapper.toUsuarioDTO(usuarioRepository.save(nuevoUsuario(dto, RolUsuario.RECEPCIONISTA, false)));
+    }
+
+    private Usuario nuevoUsuario(UsuarioRequestDTO dto, RolUsuario rol, boolean activo) {
+        String username = dto.getUsername().trim().toLowerCase();
+        if (usuarioRepository.existsByUsername(username)) {
+            throw new BadRequestException("El nombre de usuario '" + username + "' ya está registrado");
+        }
+        return Usuario.builder()
+                .username(username)
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .nombreCompleto(dto.getNombreCompleto())
                 .email(dto.getEmail())
                 .telefono(dto.getTelefono())
-                .rol(dto.getRol() != null ? dto.getRol() : RolUsuario.RECEPCIONISTA)
+                .rol(rol)
                 .turno(dto.getTurno() != null ? dto.getTurno() : "Mañana")
-                .activo(true)
+                .activo(activo)
                 .build();
-
-        return EntityMapper.toUsuarioDTO(usuarioRepository.save(u));
     }
 
     @Override

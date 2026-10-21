@@ -22,6 +22,10 @@ public interface ReservacionRepository extends JpaRepository<Reservacion, Long> 
 
     List<Reservacion> findByHabitacionId(Long habitacionId);
 
+    boolean existsByHabitacionId(Long habitacionId);
+
+    boolean existsByHuespedId(Long huespedId);
+
     List<Reservacion> findByFechaEntrada(LocalDate fechaEntrada);
 
     @Query("SELECT r FROM Reservacion r WHERE " +
@@ -31,4 +35,14 @@ public interface ReservacionRepository extends JpaRepository<Reservacion, Long> 
 
     @Query("SELECT COUNT(r) FROM Reservacion r WHERE r.fechaEntrada = :hoy AND r.estado = com.Sistema.hoteleria.model.enums.EstadoReservacion.CONFIRMADA")
     long countCheckInsProgramadosHoy(@Param("hoy") LocalDate hoy);
+
+    /** Reservas vigentes de una habitación que se cruzan con el rango [fechaEntrada, fechaSalida). */
+    @Query("SELECT COUNT(r) FROM Reservacion r WHERE r.habitacion.id = :habitacionId " +
+            "AND r.estado IN (com.Sistema.hoteleria.model.enums.EstadoReservacion.PENDIENTE, " +
+            "com.Sistema.hoteleria.model.enums.EstadoReservacion.CONFIRMADA, " +
+            "com.Sistema.hoteleria.model.enums.EstadoReservacion.EN_CURSO) " +
+            "AND r.fechaEntrada < :fechaSalida AND r.fechaSalida > :fechaEntrada")
+    long contarReservasSolapadas(@Param("habitacionId") Long habitacionId,
+                                 @Param("fechaEntrada") LocalDate fechaEntrada,
+                                 @Param("fechaSalida") LocalDate fechaSalida);
 }

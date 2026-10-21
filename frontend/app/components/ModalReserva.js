@@ -25,7 +25,9 @@ export default function ModalReserva({
   onSave,
   habitacionPreseleccionada = null,
   habitaciones = [],
-  huespedes = []
+  huespedes = [],
+  // En la web pública no hay sesión: el huésped se envía junto con la reserva
+  modoPublico = false
 }) {
   const { addToast } = useToast();
 
@@ -89,6 +91,28 @@ export default function ModalReserva({
     setLoading(true);
     try {
       let finalHuespedId = huespedIdExistente;
+
+      if (modoPublico) {
+        if (!nombres.trim() || !apellidos.trim() || !numeroDocumento.trim()) {
+          throw new Error('Por favor ingresa Nombres, Apellidos y Número de Documento del Huésped');
+        }
+        await onSave({
+          nombres: nombres.trim(),
+          apellidos: apellidos.trim(),
+          tipoDocumento,
+          numeroDocumento: numeroDocumento.trim(),
+          telefono: telefono.trim() || null,
+          email: email.trim() || null,
+          ciudadProcedencia: ciudadProcedencia.trim() || null,
+          habitacionId: Number(habitacionId),
+          fechaEntrada,
+          fechaSalida,
+          numeroPersonas: Number(numeroPersonas),
+          observaciones: observaciones.trim()
+        });
+        onClose();
+        return;
+      }
 
       // Si ingresa datos de nuevo huésped, registrarlo primero
       if (modoHuesped === 'NUEVO') {

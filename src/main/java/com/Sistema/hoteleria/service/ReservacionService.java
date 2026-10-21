@@ -15,6 +15,7 @@ public interface ReservacionService {
     List<ReservacionDTO> obtenerPorHuesped(Long huespedId);
     List<ReservacionDTO> obtenerPorRangoFechas(LocalDate desde, LocalDate hasta);
     ReservacionDTO crear(ReservacionRequestDTO dto);
+    ReservacionDTO crearPendiente(ReservacionRequestDTO dto);
     ReservacionDTO confirmar(Long id);
     ReservacionDTO cancelar(Long id, String motivo);
     void eliminar(Long id);

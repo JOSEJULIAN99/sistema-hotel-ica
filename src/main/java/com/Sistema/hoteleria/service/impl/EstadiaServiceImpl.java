@@ -76,12 +76,23 @@ public class EstadiaServiceImpl implements EstadiaService {
             reservacion = reservacionRepository.findById(dto.getReservacionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Reservación", "id", dto.getReservacionId()));
 
-            if (reservacion.getEstado() == EstadoReservacion.CANCELADA || reservacion.getEstado() == EstadoReservacion.COMPLETADA) {
+            if (reservacion.getEstado() == EstadoReservacion.EN_CURSO) {
+                throw new BadRequestException("La reservación " + reservacion.getCodigoReserva() + " ya tiene check-in registrado");
+            }
+            if (reservacion.getEstado() != EstadoReservacion.CONFIRMADA && reservacion.getEstado() != EstadoReservacion.PENDIENTE) {
                 throw new BadRequestException("La reservación no está en estado válido para Check-In: " + reservacion.getEstado());
+            }
+            LocalDate hoy = LocalDate.now();
+            if (hoy.isBefore(reservacion.getFechaEntrada())) {
+                throw new BadRequestException("La reservación inicia el " + reservacion.getFechaEntrada() + "; el check-in no puede adelantarse");
+            }
+            if (!hoy.isBefore(reservacion.getFechaSalida())) {
+                throw new BadRequestException("La reservación venció el " + reservacion.getFechaSalida());
             }
 
             huesped = reservacion.getHuesped();
             habitacion = reservacion.getHabitacion();
+            validarHabitacionParaCheckIn(habitacion);
             fechaSalida = reservacion.getFechaSalida();
             totalHospedaje = reservacion.getPrecioTotal();
 
@@ -98,17 +109,16 @@ public class EstadiaServiceImpl implements EstadiaService {
             habitacion = habitacionRepository.findById(dto.getHabitacionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Habitación", "id", dto.getHabitacionId()));
 
-            if (habitacion.getEstado() == EstadoHabitacion.OCUPADA) {
-                throw new BadRequestException("La habitación " + habitacion.getNumero() + " ya se encuentra ocupada");
-            }
-            if (habitacion.getEstado() == EstadoHabitacion.LIMPIEZA) {
-                throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en limpieza. Debe completarse la limpieza antes del Check-In");
-            }
-            if (habitacion.getEstado() == EstadoHabitacion.MANTENIMIENTO) {
-                throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en mantenimiento");
-            }
+            validarHabitacionParaCheckIn(habitacion);
 
             fechaSalida = dto.getFechaSalidaEsperada();
+            if (!fechaSalida.isAfter(LocalDate.now())) {
+                throw new BadRequestException("La fecha de salida esperada debe ser posterior a hoy");
+            }
+            if (reservacionRepository.contarReservasSolapadas(habitacion.getId(), LocalDate.now(), fechaSalida) > 0) {
+                throw new BadRequestException("La habitación " + habitacion.getNumero()
+                        + " tiene reservas entre hoy y " + fechaSalida + "; elija otra habitación o use la reserva existente");
+            }
             if (dto.getTotalHospedaje() != null && dto.getTotalHospedaje().compareTo(BigDecimal.ZERO) > 0) {
                 totalHospedaje = dto.getTotalHospedaje();
             } else {
@@ -148,7 +158,7 @@ public class EstadiaServiceImpl implements EstadiaService {
                     .tipoComprobante("ADELANTO_RESERVA")
                     .notas("Adelanto transferido desde reserva " + reservacion.getCodigoReserva())
                     .build();
-            pagoRepository.save(pagoAdelanto);
+            estadia.getPagos().add(pagoRepository.save(pagoAdelanto));
         }
 
         // Si se realizó un pago inicial en el momento del Check-In
@@ -162,10 +172,24 @@ public class EstadiaServiceImpl implements EstadiaService {
                     .tipoComprobante("BOLETA")
                     .notas("Pago inicial de Check-In")
                     .build();
-            pagoRepository.save(pagoInicial);
+            estadia.getPagos().add(pagoRepository.save(pagoInicial));
         }
 
         return EntityMapper.toEstadiaDTO(estadiaRepository.findById(estadia.getId()).orElse(estadia));
+    }
+
+    /** Una habitación solo admite check-in si no está ocupada, en limpieza ni en mantenimiento. */
+    private void validarHabitacionParaCheckIn(Habitacion habitacion) {
+        if (habitacion.getEstado() == EstadoHabitacion.OCUPADA
+                || estadiaRepository.findByHabitacionIdAndEstado(habitacion.getId(), EstadoEstadia.ACTIVA).isPresent()) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " ya se encuentra ocupada");
+        }
+        if (habitacion.getEstado() == EstadoHabitacion.LIMPIEZA) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en limpieza. Debe completarse la limpieza antes del Check-In");
+        }
+        if (habitacion.getEstado() == EstadoHabitacion.MANTENIMIENTO) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en mantenimiento");
+        }
     }
 
     @Override
@@ -179,6 +203,12 @@ public class EstadiaServiceImpl implements EstadiaService {
         }
 
         // Registrar pago final si se envía
+        BigDecimal pagoFinalMonto = (dto != null && dto.getPagoFinal() != null) ? dto.getPagoFinal() : BigDecimal.ZERO;
+        if (estadia.getSaldoPendiente().subtract(pagoFinalMonto).compareTo(BigDecimal.ZERO) > 0) {
+            throw new BadRequestException("La estadía tiene un saldo pendiente de S/ "
+                    + estadia.getSaldoPendiente().subtract(pagoFinalMonto)
+                    + ". Registre el pago completo antes del check-out.");
+        }
         if (dto != null && dto.getPagoFinal() != null && dto.getPagoFinal().compareTo(BigDecimal.ZERO) > 0) {
             Pago pagoFinal = Pago.builder()
                     .estadia(estadia)
@@ -263,7 +293,7 @@ public class EstadiaServiceImpl implements EstadiaService {
                 .fechaConsumo(LocalDateTime.now())
                 .build();
 
-        consumoServicioRepository.save(consumo);
+        estadia.getConsumos().add(consumoServicioRepository.save(consumo));
 
         BigDecimal totalConsumosActual = estadia.getTotalConsumos() != null ? estadia.getTotalConsumos() : BigDecimal.ZERO;
         estadia.setTotalConsumos(totalConsumosActual.add(subtotal));
@@ -279,6 +309,13 @@ public class EstadiaServiceImpl implements EstadiaService {
         Estadia estadia = estadiaRepository.findById(estadiaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Estadía", "id", estadiaId));
 
+        if (estadia.getEstado() != EstadoEstadia.ACTIVA) {
+            throw new BadRequestException("No se pueden registrar pagos en una estadía que no está activa");
+        }
+        if (dto.getMonto().compareTo(estadia.getSaldoPendiente()) > 0) {
+            throw new BadRequestException("El pago (S/ " + dto.getMonto() + ") supera el saldo pendiente (S/ " + estadia.getSaldoPendiente() + ")");
+        }
+
         Pago pago = Pago.builder()
                 .estadia(estadia)
                 .monto(dto.getMonto())
@@ -290,8 +327,8 @@ public class EstadiaServiceImpl implements EstadiaService {
                 .notas(dto.getNotas())
                 .build();
 
-        pagoRepository.save(pago);
+        estadia.getPagos().add(pagoRepository.save(pago));
 
-        return EntityMapper.toEstadiaDTO(estadiaRepository.findById(estadiaId).orElse(estadia));
+        return EntityMapper.toEstadiaDTO(estadia);
     }
 }

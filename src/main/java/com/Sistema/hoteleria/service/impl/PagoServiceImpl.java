@@ -1,7 +1,9 @@
 package com.Sistema.hoteleria.service.impl;
 
 import com.Sistema.hoteleria.dto.PagoDTO;
+import com.Sistema.hoteleria.exception.BadRequestException;
 import com.Sistema.hoteleria.exception.ResourceNotFoundException;
+import com.Sistema.hoteleria.model.enums.EstadoEstadia;
 import com.Sistema.hoteleria.model.entity.Estadia;
 import com.Sistema.hoteleria.model.entity.Pago;
 import com.Sistema.hoteleria.repository.EstadiaRepository;
@@ -53,6 +55,10 @@ public class PagoServiceImpl implements PagoService {
         Estadia estadia = estadiaRepository.findById(dto.getEstadiaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Estadía", "id", dto.getEstadiaId()));
 
+        if (estadia.getEstado() != EstadoEstadia.ACTIVA) {
+            throw new BadRequestException("No se pueden registrar pagos en una estadía que no está activa");
+        }
+
         Pago pago = Pago.builder()
                 .estadia(estadia)
                 .monto(dto.getMonto())
@@ -64,15 +70,21 @@ public class PagoServiceImpl implements PagoService {
                 .notas(dto.getNotas())
                 .build();
 
-        return EntityMapper.toPagoDTO(pagoRepository.save(pago));
+        Pago guardado = pagoRepository.save(pago);
+        estadia.getPagos().add(guardado);
+        return EntityMapper.toPagoDTO(guardado);
     }
 
     @Override
     @Transactional
     public void eliminarPago(Long id) {
-        if (!pagoRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Pago", "id", id);
+        Pago pago = pagoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pago", "id", id));
+        Estadia estadia = pago.getEstadia();
+        if (estadia.getEstado() != EstadoEstadia.ACTIVA) {
+            throw new BadRequestException("No se puede eliminar un pago de una estadía cerrada; registre una nota de corrección");
         }
-        pagoRepository.deleteById(id);
+        estadia.getPagos().remove(pago);
+        pagoRepository.delete(pago);
     }
 }

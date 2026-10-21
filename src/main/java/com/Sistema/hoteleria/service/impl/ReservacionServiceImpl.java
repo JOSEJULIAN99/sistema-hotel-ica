@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -85,7 +86,18 @@ public class ReservacionServiceImpl implements ReservacionService {
     @Override
     @Transactional
     public ReservacionDTO crear(ReservacionRequestDTO dto) {
-        if (dto.getFechaSalida().isBefore(dto.getFechaEntrada()) || dto.getFechaSalida().isEqual(dto.getFechaEntrada())) {
+        return crearConEstado(dto, EstadoReservacion.CONFIRMADA);
+    }
+
+    /** Reservas de la web pública: quedan PENDIENTES hasta que recepción las confirme. */
+    @Override
+    @Transactional
+    public ReservacionDTO crearPendiente(ReservacionRequestDTO dto) {
+        return crearConEstado(dto, EstadoReservacion.PENDIENTE);
+    }
+
+    private ReservacionDTO crearConEstado(ReservacionRequestDTO dto, EstadoReservacion estadoInicial) {
+        if (!dto.getFechaSalida().isAfter(dto.getFechaEntrada())) {
             throw new BadRequestException("La fecha de salida debe ser posterior a la fecha de entrada");
         }
 
@@ -95,8 +107,27 @@ public class ReservacionServiceImpl implements ReservacionService {
         Habitacion habitacion = habitacionRepository.findById(dto.getHabitacionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Habitación", "id", dto.getHabitacionId()));
 
+        if (habitacion.getEstado() == EstadoHabitacion.MANTENIMIENTO) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero() + " está en mantenimiento y no admite reservas");
+        }
+
         if (dto.getNumeroPersonas() > habitacion.getCapacidad()) {
             throw new BadRequestException("La capacidad máxima de la habitación (" + habitacion.getCapacidad() + ") es menor al número de personas (" + dto.getNumeroPersonas() + ")");
+        }
+
+        long solapadas = reservacionRepository.contarReservasSolapadas(
+                habitacion.getId(), dto.getFechaEntrada(), dto.getFechaSalida());
+        if (solapadas > 0) {
+            throw new BadRequestException("La habitación " + habitacion.getNumero()
+                    + " ya tiene una reserva que se cruza con las fechas " + dto.getFechaEntrada() + " a " + dto.getFechaSalida());
+        }
+
+        long noches = ChronoUnit.DAYS.between(dto.getFechaEntrada(), dto.getFechaSalida());
+        BigDecimal precioTotal = habitacion.getPrecioPorNoche().multiply(BigDecimal.valueOf(noches));
+
+        BigDecimal adelanto = dto.getAdelanto() != null ? dto.getAdelanto() : BigDecimal.ZERO;
+        if (adelanto.compareTo(precioTotal) > 0) {
+            throw new BadRequestException("El adelanto (S/ " + adelanto + ") no puede superar el total de la reserva (S/ " + precioTotal + ")");
         }
 
         String codigoGenerado = "RES-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMdd")) + "-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
@@ -108,13 +139,14 @@ public class ReservacionServiceImpl implements ReservacionService {
                 .fechaEntrada(dto.getFechaEntrada())
                 .fechaSalida(dto.getFechaSalida())
                 .numeroPersonas(dto.getNumeroPersonas())
-                .precioTotal(dto.getPrecioTotal())
-                .adelanto(dto.getAdelanto() != null ? dto.getAdelanto() : BigDecimal.ZERO)
-                .estado(EstadoReservacion.CONFIRMADA)
+                .precioTotal(precioTotal)
+                .adelanto(adelanto)
+                .estado(estadoInicial)
                 .observaciones(dto.getObservaciones())
                 .build();
 
-        if (dto.getFechaEntrada().isEqual(LocalDate.now())) {
+        // Solo se marca RESERVADA si la habitación está libre; nunca se pisa OCUPADA ni LIMPIEZA
+        if (dto.getFechaEntrada().isEqual(LocalDate.now()) && habitacion.getEstado() == EstadoHabitacion.DISPONIBLE) {
             habitacion.setEstado(EstadoHabitacion.RESERVADA);
             habitacionRepository.save(habitacion);
         }
@@ -127,6 +159,12 @@ public class ReservacionServiceImpl implements ReservacionService {
     public ReservacionDTO confirmar(Long id) {
         Reservacion r = reservacionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservación", "id", id));
+        if (r.getEstado() == EstadoReservacion.CONFIRMADA) {
+            return EntityMapper.toReservacionDTO(r);
+        }
+        if (r.getEstado() != EstadoReservacion.PENDIENTE) {
+            throw new BadRequestException("Solo se puede confirmar una reserva PENDIENTE. Estado actual: " + r.getEstado());
+        }
         r.setEstado(EstadoReservacion.CONFIRMADA);
         return EntityMapper.toReservacionDTO(reservacionRepository.save(r));
     }
@@ -136,6 +174,12 @@ public class ReservacionServiceImpl implements ReservacionService {
     public ReservacionDTO cancelar(Long id, String motivo) {
         Reservacion r = reservacionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservación", "id", id));
+        if (r.getEstado() == EstadoReservacion.EN_CURSO) {
+            throw new BadRequestException("La reserva ya tiene check-in; debe cerrarse con check-out");
+        }
+        if (r.getEstado() == EstadoReservacion.COMPLETADA || r.getEstado() == EstadoReservacion.CANCELADA) {
+            throw new BadRequestException("La reserva ya está " + r.getEstado());
+        }
         r.setEstado(EstadoReservacion.CANCELADA);
         if (motivo != null && !motivo.isEmpty()) {
             r.setObservaciones((r.getObservaciones() != null ? r.getObservaciones() + " | " : "") + "Cancelado: " + motivo);
@@ -150,9 +194,11 @@ public class ReservacionServiceImpl implements ReservacionService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        if (!reservacionRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Reservación", "id", id);
+        Reservacion r = reservacionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservación", "id", id));
+        if (r.getEstado() != EstadoReservacion.CANCELADA && r.getEstado() != EstadoReservacion.PENDIENTE) {
+            throw new BadRequestException("Solo se pueden eliminar reservas PENDIENTES o CANCELADAS; las demás quedan como historial");
         }
-        reservacionRepository.deleteById(id);
+        reservacionRepository.delete(r);
     }
 }

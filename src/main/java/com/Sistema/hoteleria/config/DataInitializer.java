@@ -6,6 +6,7 @@ import com.Sistema.hoteleria.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
     private final TareaLimpiezaRepository tareaLimpiezaRepository;
     private final ConsumoServicioRepository consumoServicioRepository;
     private final PagoRepository pagoRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -40,7 +42,7 @@ public class DataInitializer implements CommandLineRunner {
         // 1. Usuarios / Personal del Hotel
         Usuario pablo = usuarioRepository.save(Usuario.builder()
                 .username("pluna")
-                .password("hotel123")
+                .password(passwordEncoder.encode("hotel123"))
                 .nombreCompleto("Pablo Luna")
                 .email("pluna@hotelprincesica.com")
                 .telefono("956123456")
@@ -51,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Usuario maria = usuarioRepository.save(Usuario.builder()
                 .username("mgomez")
-                .password("hotel123")
+                .password(passwordEncoder.encode("hotel123"))
                 .nombreCompleto("María Gómez")
                 .email("mgomez@hotelprincesica.com")
                 .telefono("956789123")
@@ -62,7 +64,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Usuario rosa = usuarioRepository.save(Usuario.builder()
                 .username("rflores")
-                .password("hotel123")
+                .password(passwordEncoder.encode("hotel123"))
                 .nombreCompleto("Rosa Flores")
                 .email("rflores@hotelprincesica.com")
                 .telefono("956321654")
@@ -73,7 +75,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Usuario admin = usuarioRepository.save(Usuario.builder()
                 .username("admin")
-                .password("admin123")
+                .password(passwordEncoder.encode("admin123"))
                 .nombreCompleto("Administrador Principal")
                 .email("admin@hotelprincesica.com")
                 .telefono("999888777")

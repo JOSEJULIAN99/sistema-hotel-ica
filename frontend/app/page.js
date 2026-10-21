@@ -27,7 +27,7 @@ import {
   Lock,
   LogOut
 } from 'lucide-react';
-import { HabitacionAPI, ReservacionAPI, HuespedAPI } from '../lib/api';
+import { HabitacionAPI, ReservacionAPI } from '../lib/api';
 import { AuthAPI } from '../lib/auth';
 import ModalReserva from './components/ModalReserva';
 import ModalHuesped from './components/ModalHuesped';
@@ -46,7 +46,6 @@ function HotelLandingContent() {
   const { addToast } = useToast();
   const [usuario, setUsuario] = useState(null);
   const [habitaciones, setHabitaciones] = useState([]);
-  const [huespedes, setHuespedes] = useState([]);
   const [checkIn, setCheckIn] = useState(() => new Date().toISOString().split('T')[0]);
   const [checkOut, setCheckOut] = useState(() => new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]);
   const [huespedesCount, setHuespedesCount] = useState(2);
@@ -58,12 +57,9 @@ function HotelLandingContent() {
     setUsuario(AuthAPI.getUsuarioActual());
     async function load() {
       try {
-        const [h, hu] = await Promise.all([
-          HabitacionAPI.getAll(),
-          HuespedAPI.getAll()
-        ]);
+        // La web pública solo consulta habitaciones; los huéspedes son datos privados
+        const h = await HabitacionAPI.getAll();
         setHabitaciones(h || []);
-        setHuespedes(hu || []);
       } catch (e) {
         console.error(e);
       }
@@ -78,12 +74,9 @@ function HotelLandingContent() {
 
   const handleGuardarReserva = async (payload) => {
     try {
-      await ReservacionAPI.create(payload);
-      addToast('¡Reservación registrada con éxito! Ingresa al sistema para confirmarla.', 'success');
+      const r = await ReservacionAPI.createPublica(payload);
+      addToast(`Solicitud ${r?.codigoReserva || ''} registrada. Recepción confirmará su reserva.`, 'success');
       setModalReservaOpen(false);
-      setTimeout(() => {
-        router.push('/VistaPersonal/login');
-      }, 900);
     } catch (err) {
       addToast(err.message || 'Error al registrar reservación', 'error');
     }
@@ -416,7 +409,7 @@ function HotelLandingContent() {
         onSave={handleGuardarReserva}
         habitacionPreseleccionada={habSeleccionada}
         habitaciones={habitaciones}
-        huespedes={huespedes}
+        modoPublico
       />
     </div>
   );

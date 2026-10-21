@@ -1,7 +1,9 @@
 package com.Sistema.hoteleria.service.impl;
 
 import com.Sistema.hoteleria.dto.ConsumoDTO;
+import com.Sistema.hoteleria.exception.BadRequestException;
 import com.Sistema.hoteleria.exception.ResourceNotFoundException;
+import com.Sistema.hoteleria.model.enums.EstadoEstadia;
 import com.Sistema.hoteleria.model.entity.ConsumoServicio;
 import com.Sistema.hoteleria.model.entity.Estadia;
 import com.Sistema.hoteleria.repository.ConsumoServicioRepository;
@@ -38,6 +40,10 @@ public class ConsumoServicioServiceImpl implements ConsumoServicioService {
         Estadia estadia = estadiaRepository.findById(dto.getEstadiaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Estadía", "id", dto.getEstadiaId()));
 
+        if (estadia.getEstado() != EstadoEstadia.ACTIVA) {
+            throw new BadRequestException("No se pueden agregar consumos a una estadía que no está activa");
+        }
+
         BigDecimal subtotal = dto.getPrecioUnitario().multiply(BigDecimal.valueOf(dto.getCantidad()));
 
         ConsumoServicio consumo = ConsumoServicio.builder()
@@ -50,6 +56,7 @@ public class ConsumoServicioServiceImpl implements ConsumoServicioService {
                 .build();
 
         consumo = consumoServicioRepository.save(consumo);
+        estadia.getConsumos().add(consumo);
 
         // Actualizar totales de estadía
         BigDecimal totalActual = estadia.getTotalConsumos() != null ? estadia.getTotalConsumos() : BigDecimal.ZERO;
@@ -67,6 +74,10 @@ public class ConsumoServicioServiceImpl implements ConsumoServicioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Consumo", "id", id));
 
         Estadia estadia = consumo.getEstadia();
+        if (estadia.getEstado() != EstadoEstadia.ACTIVA) {
+            throw new BadRequestException("No se pueden eliminar consumos de una estadía cerrada");
+        }
+        estadia.getConsumos().remove(consumo);
         estadia.setTotalConsumos(estadia.getTotalConsumos().subtract(consumo.getSubtotal()));
         estadia.recalcularTotal();
         estadiaRepository.save(estadia);

@@ -171,9 +171,9 @@ export default function LoginPage() {
       return;
     }
 
-    if (regPassword.length < 4) {
+    if (regPassword.length < 6) {
       addToast(
-        'La contraseña debe tener al menos 4 caracteres',
+        'La contraseña debe tener al menos 6 caracteres',
         'warning'
       );
       return;
@@ -201,53 +201,19 @@ export default function LoginPage() {
         password:
           regPassword,
 
-        // Las cuentas creadas desde este formulario
-        // serán RECEPCIONISTAS.
-        rol: 'RECEPCIONISTA',
-
+        // El servidor asigna el rol RECEPCIONISTA y deja la cuenta inactiva.
         turno: 'General'
       });
 
+      // La cuenta queda pendiente: un administrador debe activarla
       addToast(
-        '¡Cuenta creada con éxito! Iniciando sesión...',
+        'Cuenta creada. Un administrador debe activarla antes de su primer ingreso.',
         'success'
       );
 
-      // Iniciar sesión automáticamente
-      const user = await AuthAPI.login(
-        regUsername
-          .trim()
-          .toLowerCase(),
-        regPassword
-      );
-
-      const rolActual =
-        user.rol ||
-        user.role ||
-        'RECEPCIONISTA';
-
-      const nombreUsuario =
-        user.nombreCompleto ||
-        user.username ||
-        regUsername.trim();
-
-      // Guardar información de sesión
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'userRole',
-          rolActual
-        );
-
-        localStorage.setItem(
-          'userName',
-          nombreUsuario
-        );
-      }
-
-      // Enviar al Dashboard correspondiente
-      redirigirSegunRol(
-        rolActual
-      );
+      setUsername(regUsername.trim().toLowerCase());
+      setPassword('');
+      setIsRegister(false);
 
     } catch (err) {
       addToast(

@@ -18,8 +18,15 @@ public interface TareaLimpiezaRepository extends JpaRepository<TareaLimpieza, Lo
 
     List<TareaLimpieza> findByHabitacionId(Long habitacionId);
 
-    @Query("SELECT t FROM TareaLimpieza t WHERE t.estado IN (com.Sistema.hoteleria.model.enums.EstadoLimpieza.PENDIENTE, com.Sistema.hoteleria.model.enums.EstadoLimpieza.EN_PROCESO) ORDER BY t.prioridad DESC, t.fechaCreacion ASC")
+    @Query("SELECT t FROM TareaLimpieza t WHERE t.estado IN (com.Sistema.hoteleria.model.enums.EstadoLimpieza.PENDIENTE, com.Sistema.hoteleria.model.enums.EstadoLimpieza.EN_PROCESO) " +
+            "ORDER BY CASE t.prioridad WHEN com.Sistema.hoteleria.model.enums.PrioridadLimpieza.URGENTE THEN 0 " +
+            "WHEN com.Sistema.hoteleria.model.enums.PrioridadLimpieza.ALTA THEN 1 " +
+            "WHEN com.Sistema.hoteleria.model.enums.PrioridadLimpieza.MEDIA THEN 2 ELSE 3 END, t.fechaCreacion ASC")
     List<TareaLimpieza> findTareasPendientesYEnProceso();
 
     long countByEstado(EstadoLimpieza estado);
+
+    long countByHabitacionIdAndEstadoIn(Long habitacionId, java.util.Collection<EstadoLimpieza> estados);
+
+    boolean existsByHabitacionId(Long habitacionId);
 }

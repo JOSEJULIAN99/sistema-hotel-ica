@@ -4,7 +4,9 @@ import com.Sistema.hoteleria.dto.HuespedDTO;
 import com.Sistema.hoteleria.exception.BadRequestException;
 import com.Sistema.hoteleria.exception.ResourceNotFoundException;
 import com.Sistema.hoteleria.model.entity.Huesped;
+import com.Sistema.hoteleria.repository.EstadiaRepository;
 import com.Sistema.hoteleria.repository.HuespedRepository;
+import com.Sistema.hoteleria.repository.ReservacionRepository;
 import com.Sistema.hoteleria.service.HuespedService;
 import com.Sistema.hoteleria.util.EntityMapper;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 public class HuespedServiceImpl implements HuespedService {
 
     private final HuespedRepository huespedRepository;
+    private final ReservacionRepository reservacionRepository;
+    private final EstadiaRepository estadiaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -102,6 +106,9 @@ public class HuespedServiceImpl implements HuespedService {
     public void eliminar(Long id) {
         if (!huespedRepository.existsById(id)) {
             throw new ResourceNotFoundException("Huésped", "id", id);
+        }
+        if (reservacionRepository.existsByHuespedId(id) || estadiaRepository.existsByHuespedId(id)) {
+            throw new BadRequestException("El huésped tiene reservas o estadías registradas; no se puede eliminar para conservar el historial");
         }
         huespedRepository.deleteById(id);
     }

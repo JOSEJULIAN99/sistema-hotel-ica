@@ -150,6 +150,8 @@ CREATE TABLE tareas_limpieza (
 -- ==========================================================
 
 -- 1. Usuarios del Sistema
+-- Nota: estas contraseñas iniciales se migran automáticamente a BCrypt en el primer
+-- inicio de sesión (UsuarioServiceImpl.passwordValida). Cámbielas tras instalar.
 INSERT INTO usuarios (id, username, password, nombre_completo, email, telefono, rol, turno, activo, created_at) VALUES
 (1, 'admin', 'admin123', 'Administrador General', 'admin@hotelprincesica.com', '999888777', 'ADMINISTRADOR', 'General', TRUE, NOW()),
 (2, 'pluna', 'hotel123', 'Pablo Luna', 'pluna@hotelprincesica.com', '956123456', 'RECEPCIONISTA', 'Turno Tarde', TRUE, NOW()),
