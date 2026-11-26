@@ -8,34 +8,61 @@ on:
 
 env:
   IMAGE_NAME: hotel-backend
+  RESOURCE_GROUP: rg-hotel-ica
+  CONTAINER_NAME: hotel-backend
+  DNS_NAME: hotel-princes-ica-app
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar repositorio
+      - name: Descargar codigo del repositorio
         uses: actions/checkout@v4
 
-      - name: Iniciar sesión en Azure Container Registry (ACR)
+      - name: Iniciar sesion en Azure Container Registry (ACR)
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Construir y subir imagen Docker a ACR
+      - name: Construir y subir imagen Docker original a ACR
         run: |
           docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest .
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Iniciar sesión en Azure
+      - name: Iniciar sesion en Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Desplegar en Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ secrets.WEBAPP_NAME }}
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Desplegar contenedor en Azure Container Instances (ACI)
+        run: |
+          az container create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --registry-login-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --dns-name-label ${{ env.DNS_NAME }} \
+            --ports 8080 \
+            --cpu 1 \
+            --memory 1.5 \
+            --location centralus \
+            --environment-variables \
+              PORT=8080 \
+              WEBSITES_PORT=8080 \
+              DB_URL="jdbc:postgresql://psql-hotel-ica-01.postgres.database.azure.com:5432/hotel_princes_ica?sslmode=require" \
+              DB_USER="hoteladmin" \
+              DB_PASSWORD="HotelPass12345!" \
+              JWT_SECRET="clave-super-secreta-produccion-hotel-princes-ica-2026-min-32-chars" \
+              DDL_AUTO="update"
+
+      - name: Mostrar URL publica de la aplicacion
+        run: |
+          echo "=========================================================="
+          echo "¡Tu aplicacion Spring Boot ha sido desplegada con exito!"
+          echo "URL publica: http://${{ env.DNS_NAME }}.centralus.azurecontainer.io:8080"
+          echo "=========================================================="
